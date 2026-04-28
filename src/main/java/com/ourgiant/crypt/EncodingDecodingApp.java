@@ -54,6 +54,8 @@ public class EncodingDecodingApp extends JFrame {
         // Create a simple 16x16 icon
         java.awt.image.BufferedImage icon = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = icon.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2d.setColor(new Color(70, 130, 180));
         g2d.fillRect(0, 0, 16, 16);
         g2d.setColor(Color.WHITE);
@@ -542,6 +544,8 @@ public class EncodingDecodingApp extends JFrame {
     }
     
     public static void main(String[] args) {
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
         // Set system look and feel
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
