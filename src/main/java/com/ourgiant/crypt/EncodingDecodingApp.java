@@ -41,7 +41,8 @@ public class EncodingDecodingApp extends JFrame {
         setTitle("Universal Encoder/Decoder v1.0");
         setSize(800, 600);
         setLocationRelativeTo(null);
-        
+        setJMenuBar(AppLauncher.createFileMenu(this));
+
         // Set application icon (using a built-in icon)
         try {
             setIconImage(createAppIcon());

@@ -28,7 +28,8 @@ public class GPGDecryptor extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700);
         setLocationRelativeTo(null);
-        
+        setJMenuBar(AppLauncher.createFileMenu(this));
+
         initComponents();
         checkGPGVersion();
     }
