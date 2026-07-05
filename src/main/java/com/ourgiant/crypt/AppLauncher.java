@@ -33,6 +33,27 @@ public class AppLauncher extends JFrame {
         add(encodingButton);
     }
 
+    public static JMenuBar createFileMenu(JFrame frame) {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+
+        JMenuItem switchAppsItem = new JMenuItem("Switch Apps");
+        switchAppsItem.addActionListener(e -> {
+            frame.dispose();
+            new AppLauncher().setVisible(true);
+        });
+        fileMenu.add(switchAppsItem);
+
+        fileMenu.addSeparator();
+
+        JMenuItem exitItem = new JMenuItem("Exit");
+        exitItem.addActionListener(e -> System.exit(0));
+        fileMenu.add(exitItem);
+
+        menuBar.add(fileMenu);
+        return menuBar;
+    }
+
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
