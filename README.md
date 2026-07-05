@@ -40,9 +40,10 @@ Produces `target/decrypter-all.jar`.
 java -jar target/decrypter-all.jar
 ```
 
-The launcher starts the GPG Decryptor by default. To launch the Encoder/Decoder, run the alternate entry point:
+A launcher window opens letting you choose between the GPG Decryptor and the Encoder/Decoder. To skip the launcher and open a tool directly:
 
 ```bash
+java -cp target/decrypter-all.jar com.ourgiant.crypt.GPGDecryptor
 java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 ```
 
@@ -50,6 +51,7 @@ java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 
 ```
 src/main/java/com/ourgiant/crypt/
+├── AppLauncher.java           # Tool picker / entry point
 ├── GPGDecryptor.java          # GPG file decryption UI
 └── EncodingDecodingApp.java   # Universal encoder/decoder UI
 ```
