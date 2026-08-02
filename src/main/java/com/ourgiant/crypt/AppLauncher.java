@@ -6,7 +6,7 @@ import java.awt.*;
 public class AppLauncher extends JFrame {
 
     public AppLauncher() {
-        setTitle("Codes Switcher");
+        setTitle("Codes Switcher v" + AppVersion.get());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(360, 180);
         setLocationRelativeTo(null);
