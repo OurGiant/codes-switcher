@@ -1,0 +1,198 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run tests
+        run: mvn test
+
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      - name: Get version from pom.xml
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
+      - name: Create installer with jpackage
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          jpackage \
+            --input target/ \
+            --main-jar decrypter-all.jar \
+            --main-class com.ourgiant.crypt.AppLauncher \
+            --name "Codes Switcher" \
+            --app-version ${{ steps.version.outputs.version }} \
+            --type app-image \
+            --icon src/packaging/app-icon.ico \
+            --dest installer-output
+
+      - name: Zip app image
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd installer-output
+          7z a ../CodesSwitcher-${{ steps.version.outputs.version }}.zip "Codes Switcher"
+
+      - name: Upload Windows artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            CodesSwitcher-${{ steps.version.outputs.version }}.zip
+            target/decrypter-all.jar
+
+  build-linux:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      - name: Get version from pom.xml
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
+      - name: Create .deb package with jpackage
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          jpackage \
+            --input target/ \
+            --main-jar decrypter-all.jar \
+            --main-class com.ourgiant.crypt.AppLauncher \
+            --name codes-switcher \
+            --app-version ${{ steps.version.outputs.version }} \
+            --vendor OurGiant \
+            --type deb \
+            --icon src/main/resources/app-icon.png \
+            --dest installer-output
+
+      - name: Upload Linux artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: installer-output/*.deb
+
+  build-macos:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      - name: Get version from pom.xml
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: version
+        run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+
+      - name: Create .dmg with jpackage
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          jpackage \
+            --input target/ \
+            --main-jar decrypter-all.jar \
+            --main-class com.ourgiant.crypt.AppLauncher \
+            --name "Codes Switcher" \
+            --app-version ${{ steps.version.outputs.version }} \
+            --vendor OurGiant \
+            --type dmg \
+            --icon src/packaging/app-icon.icns \
+            --dest installer-output
+
+      - name: Rename dmg for this architecture
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd installer-output
+          mv *.dmg "CodesSwitcher-${{ steps.version.outputs.version }}-${{ matrix.arch }}.dmg"
+
+      - name: Upload macOS artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts-${{ matrix.arch }}
+          path: installer-output/*.dmg
+
+  release:
+    needs: [ build-windows, build-linux, build-macos ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: release-artifacts/*
+          generate_release_notes: true
