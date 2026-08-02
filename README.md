@@ -61,6 +61,8 @@ src/main/java/com/ourgiant/crypt/
 
 ## Dependencies
 
+- [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (+ `flatlaf-intellij-themes`, `flatlaf-extras`) — UI theming
+- [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
 
 ## License

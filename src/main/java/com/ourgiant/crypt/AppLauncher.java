@@ -1,9 +1,15 @@
 package com.ourgiant.crypt;
 
+import com.formdev.flatlaf.FlatLightLaf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class AppLauncher extends JFrame {
+    private static final Logger log = LoggerFactory.getLogger(AppLauncher.class);
+
 
     public AppLauncher() {
         setTitle("Codes Switcher v" + AppVersion.get());
@@ -57,10 +63,8 @@ public class AppLauncher extends JFrame {
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            // Use default look and feel if system L&F is not available
+        if (!FlatLightLaf.setup()) {
+            log.warn("FlatLaf setup failed; falling back to default look and feel");
         }
 
         SwingUtilities.invokeLater(() -> new AppLauncher().setVisible(true));
