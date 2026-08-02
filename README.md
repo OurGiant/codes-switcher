@@ -23,7 +23,7 @@ Encode and decode text using a wide range of formats from a single interface.
 
 ## Prerequisites
 
-- Java 21 or higher
+- Java 24 or higher
 - GPG 2.4.8+ (GPG Decryptor only — the app can install it if missing)
 
 ## Build

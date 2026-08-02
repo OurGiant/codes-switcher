@@ -7,17 +7,17 @@
 
     <groupId>com.ourgiant.gpgutil</groupId>
     <artifactId>decrypter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>GPG File Decryptor</name>
     <description>A Java Swing application for decrypting GPG encrypted files</description>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>24</maven.compiler.release>
         <main.class>com.ourgiant.crypt.AppLauncher</main.class>
     </properties>
 
@@ -55,9 +55,9 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                    <release>21</release>
+                    <source>24</source>
+                    <target>24</target>
+                    <release>24</release>
                 </configuration>
             </plugin>
 
