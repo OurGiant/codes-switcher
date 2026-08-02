@@ -1,5 +1,6 @@
 package com.ourgiant.crypt;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.ourgiant.crypt.gpg.GpgOperations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +11,6 @@ import java.awt.*;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.*;
-import java.util.zip.*;
 
 public class GPGDecryptor extends JFrame {
     private static final Logger log = LoggerFactory.getLogger(GPGDecryptor.class);
@@ -24,10 +24,11 @@ public class GPGDecryptor extends JFrame {
     private JButton installGPGButton;
     private JLabel statusLabel;
     private JLabel gpgVersionLabel;
-    
+
     private static final String GPG_TARBALL_URL = "https://gnupg.org/ftp/gcrypt/gnupg/gnupg-2.4.8.tar.bz2";
     private static final String REQUIRED_VERSION = "2.4.8";
-    private String gpgPath = "gpg"; // Default to system PATH
+    private final String gpgPath = "gpg"; // Default to system PATH
+    private final GpgOperations gpgOperations = new GpgOperations(gpgPath);
 
     public GPGDecryptor() {
         setTitle("GPG File Decryptor");
@@ -196,15 +197,7 @@ public class GPGDecryptor extends JFrame {
         SwingWorker<String, Void> worker = new SwingWorker<>() {
             @Override
             protected String doInBackground() {
-                try {
-                    Process process = new ProcessBuilder(gpgPath, "--version").start();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    String line = reader.readLine();
-                    process.waitFor();
-                    return line != null ? line : "Unknown";
-                } catch (Exception e) {
-                    return "GPG not found";
-                }
+                return gpgOperations.checkGpgVersion();
             }
 
             @Override
@@ -405,10 +398,8 @@ public class GPGDecryptor extends JFrame {
             @Override
             protected Boolean doInBackground() {
                 try {
-                    String homeDir = System.getProperty("user.home");
-                    Path downloadDir = Paths.get(homeDir, "gpg-build");
-                    Files.createDirectories(downloadDir);
-                    
+                    Path downloadDir = gpgOperations.prepareBuildDirectory();
+
                     publish("Created build directory: " + downloadDir);
                     publish("Downloading GPG 2.4.8 source tarball...");
                     publish("This may take several minutes depending on your connection.");
@@ -498,69 +489,7 @@ public class GPGDecryptor extends JFrame {
         SwingWorker<Boolean, String> worker = new SwingWorker<>() {
             @Override
             protected Boolean doInBackground() {
-                try {
-                    publish("Starting decryption process...");
-                    
-                    ProcessBuilder pb = new ProcessBuilder();
-                    
-                    if (!keyFile.isEmpty()) {
-                        // Import key first
-                        publish("Importing key from: " + keyFile);
-                        ProcessBuilder importPb = new ProcessBuilder(gpgPath, "--import", keyFile);
-                        Process importProcess = importPb.start();
-                        
-                        BufferedReader importReader = new BufferedReader(
-                            new InputStreamReader(importProcess.getErrorStream()));
-                        String line;
-                        while ((line = importReader.readLine()) != null) {
-                            publish("  " + line);
-                        }
-                        importProcess.waitFor();
-                    }
-                    
-                    // Build decrypt command
-                    if (passphrase.isEmpty()) {
-                        pb.command(gpgPath, "--decrypt", "--output", outputFile, encryptedFile);
-                    } else {
-                        pb.command(gpgPath, "--batch", "--yes", "--passphrase-fd", "0", 
-                                 "--decrypt", "--output", outputFile, encryptedFile);
-                    }
-                    
-                    publish("Executing: " + String.join(" ", pb.command()));
-                    Process process = pb.start();
-                    
-                    // Send passphrase if provided
-                    if (!passphrase.isEmpty()) {
-                        OutputStream os = process.getOutputStream();
-                        os.write((passphrase + "\n").getBytes());
-                        os.flush();
-                        os.close();
-                    }
-                    
-                    // Read output
-                    BufferedReader errorReader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream()));
-                    String line;
-                    while ((line = errorReader.readLine()) != null) {
-                        publish(line);
-                    }
-                    
-                    int exitCode = process.waitFor();
-                    
-                    if (exitCode == 0 && Files.exists(Paths.get(outputFile))) {
-                        publish("SUCCESS: File decrypted successfully!");
-                        publish("Output saved to: " + outputFile);
-                        return true;
-                    } else {
-                        publish("ERROR: Decryption failed with exit code " + exitCode);
-                        return false;
-                    }
-                    
-                } catch (Exception e) {
-                    publish("ERROR: " + e.getMessage());
-                    log.error("Decryption failed", e);
-                    return false;
-                }
+                return gpgOperations.decryptFile(encryptedFile, keyFile, outputFile, passphrase, this::publish);
             }
 
             @Override
