@@ -1,4 +1,8 @@
 package com.ourgiant.crypt;
+import com.formdev.flatlaf.FlatLightLaf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
@@ -9,6 +13,8 @@ import java.nio.file.*;
 import java.util.zip.*;
 
 public class GPGDecryptor extends JFrame {
+    private static final Logger log = LoggerFactory.getLogger(GPGDecryptor.class);
+
     private JTextField encryptedFileField;
     private JTextField keyFileField;
     private JTextField outputFileField;
@@ -552,7 +558,7 @@ public class GPGDecryptor extends JFrame {
                     
                 } catch (Exception e) {
                     publish("ERROR: " + e.getMessage());
-                    e.printStackTrace();
+                    log.error("Decryption failed", e);
                     return false;
                 }
             }
@@ -594,10 +600,8 @@ public class GPGDecryptor extends JFrame {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
         SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (!FlatLightLaf.setup()) {
+                log.warn("FlatLaf setup failed; falling back to default look and feel");
             }
             new GPGDecryptor().setVisible(true);
         });

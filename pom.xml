@@ -7,7 +7,7 @@
 
     <groupId>com.ourgiant.gpgutil</groupId>
     <artifactId>decrypter</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>GPG File Decryptor</name>
@@ -22,8 +22,33 @@
     </properties>
 
     <dependencies>
-        <!-- No external runtime dependencies required -->
-        <!-- Swing is part of Java SE -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf-intellij-themes</artifactId>
+            <version>3.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf-extras</artifactId>
+            <version>3.7.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

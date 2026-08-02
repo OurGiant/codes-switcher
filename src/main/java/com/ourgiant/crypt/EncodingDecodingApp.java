@@ -1,5 +1,9 @@
 package com.ourgiant.crypt;
 
+import com.formdev.flatlaf.FlatLightLaf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
@@ -18,6 +22,8 @@ import static com.ourgiant.crypt.TextCodec.SHA512;
 import static com.ourgiant.crypt.TextCodec.URL;
 
 public class EncodingDecodingApp extends JFrame {
+    private static final Logger log = LoggerFactory.getLogger(EncodingDecodingApp.class);
+
     private JComboBox<String> methodComboBox;
     private JTextArea inputTextArea;
     private JTextArea outputTextArea;
@@ -256,13 +262,10 @@ public class EncodingDecodingApp extends JFrame {
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        // Set system look and feel
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            // Use default look and feel if system L&F is not available
+        if (!FlatLightLaf.setup()) {
+            log.warn("FlatLaf setup failed; falling back to default look and feel");
         }
-        
+
         // Create and show the application
         SwingUtilities.invokeLater(() -> {
             new EncodingDecodingApp().setVisible(true);
