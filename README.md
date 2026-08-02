@@ -52,9 +52,16 @@ java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 ```
 src/main/java/com/ourgiant/crypt/
 ├── AppLauncher.java           # Tool picker / entry point
+├── AppVersion.java            # Reads the app's own version at runtime
 ├── GPGDecryptor.java          # GPG file decryption UI
+├── GpgVersion.java            # GPG version comparison logic
+├── TextCodec.java             # Encoding/decoding/hashing logic
 └── EncodingDecodingApp.java   # Universal encoder/decoder UI
 ```
+
+## Dependencies
+
+- [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
 
 ## License
 
