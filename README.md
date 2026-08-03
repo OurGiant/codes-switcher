@@ -47,6 +47,10 @@ java -cp target/decrypter-all.jar com.ourgiant.crypt.GPGDecryptor
 java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 ```
 
+Every window's Help > About shows the running version and checks GitHub
+Releases for a newer one (manually, or silently and non-blockingly on
+startup, at most once per newly-released version).
+
 ## Native installers
 
 Tagged releases (`v*`) trigger a GitHub Actions matrix
@@ -63,20 +67,27 @@ scripts for its desktop-entry integration.
 src/main/java/com/ourgiant/crypt/
 ├── AppLauncher.java           # Tool picker / entry point
 ├── AppVersion.java            # Reads the app's own version at runtime
+├── AppPreferences.java        # Local app state (last-notified update version)
+├── AboutDialog.java           # Help > About: version + update check
 ├── GPGDecryptor.java          # GPG file decryption UI (thin, delegates to gpg/)
 ├── GpgVersion.java            # GPG version comparison logic
 ├── TextCodec.java             # Encoding/decoding/hashing logic
 ├── EncodingDecodingApp.java   # Universal encoder/decoder UI
-└── gpg/
-    ├── GpgOperations.java        # GPG install/decrypt domain logic (no Swing)
-    ├── GpgProgressListener.java  # Progress callback interface
-    └── ProcessStarter.java       # Injectable process-starting seam (for tests)
+├── gpg/
+│   ├── GpgOperations.java        # GPG install/decrypt domain logic (no Swing)
+│   ├── GpgProgressListener.java  # Progress callback interface
+│   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
+└── util/
+    ├── UpdateChecker.java        # GitHub releases API check (no Swing)
+    ├── HttpClientFactory.java    # HttpClient w/ Windows trust-store support
+    └── NetworkFetchException.java
 ```
 
 ## Dependencies
 
 - [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (+ `flatlaf-intellij-themes`, `flatlaf-extras`) — UI theming
 - [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
+- [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
 
 ## License
