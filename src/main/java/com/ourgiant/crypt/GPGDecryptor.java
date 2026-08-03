@@ -36,6 +36,10 @@ public class GPGDecryptor extends JFrame {
         setSize(900, 700);
         setLocationRelativeTo(null);
         setJMenuBar(AppLauncher.createMenuBar(this));
+        Image icon = AppLauncher.loadAppIcon();
+        if (icon != null) {
+            setIconImage(icon);
+        }
 
         initComponents();
         checkGPGVersion();

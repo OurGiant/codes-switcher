@@ -20,6 +20,10 @@ public class AppLauncher extends JFrame {
         setSize(360, 180);
         setLocationRelativeTo(null);
         setLayout(new GridLayout(0, 1, 10, 10));
+        Image icon = loadAppIcon();
+        if (icon != null) {
+            setIconImage(icon);
+        }
 
         JLabel label = new JLabel("Choose a tool", SwingConstants.CENTER);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 16f));
@@ -43,6 +47,12 @@ public class AppLauncher extends JFrame {
 
         setJMenuBar(createMenuBar(this));
         checkForUpdateAndNotifyIfNewer();
+    }
+
+    /** Shared by every window so the running app matches the packaged installer's icon, not just the jpackage-set one. */
+    public static Image loadAppIcon() {
+        java.net.URL url = AppLauncher.class.getResource("/app-icon.png");
+        return url != null ? new ImageIcon(url).getImage() : null;
     }
 
     public static JMenuBar createMenuBar(JFrame frame) {
