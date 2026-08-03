@@ -52,8 +52,10 @@ java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 Tagged releases (`v*`) trigger a GitHub Actions matrix
 (`.github/workflows/build.yml`) that builds a Windows installer, a macOS
 universal `.dmg`, and a Linux `.deb` via `jpackage`, and publishes them to
-a GitHub Release. Icon assets live in `src/packaging/` (`.ico`, `.icns`)
-and `src/main/resources/app-icon.png` (Linux).
+a GitHub Release. Icon assets live in `src/packaging/` (`.ico`, `.icns`,
+and `linux/app-icon.png`); the Linux `.deb` build also uses
+`src/packaging/linux/codes-switcher.desktop` and `postinst`/`prerm`
+scripts for its desktop-entry integration.
 
 ## Project Structure
 
