@@ -43,29 +43,12 @@ public class EncodingDecodingApp extends JFrame {
         setLocationRelativeTo(null);
         setJMenuBar(AppLauncher.createMenuBar(this));
 
-        // Set application icon (using a built-in icon)
-        try {
-            setIconImage(createAppIcon());
-        } catch (Exception e) {
-            // Ignore if icon creation fails
+        Image icon = AppLauncher.loadAppIcon();
+        if (icon != null) {
+            setIconImage(icon);
         }
     }
-    
-    private Image createAppIcon() {
-        // Create a simple 16x16 icon
-        java.awt.image.BufferedImage icon = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = icon.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setColor(new Color(70, 130, 180));
-        g2d.fillRect(0, 0, 16, 16);
-        g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 10));
-        g2d.drawString("E", 5, 12);
-        g2d.dispose();
-        return icon;
-    }
-    
+
     private void initializeComponents() {
         // Method selection
         methodComboBox = new JComboBox<>(new String[]{
