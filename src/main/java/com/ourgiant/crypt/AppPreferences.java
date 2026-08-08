@@ -2,10 +2,12 @@ package com.ourgiant.crypt;
 
 import java.util.prefs.Preferences;
 
-/** Local app state. Currently just tracks which update version the silent startup check has already notified about. */
+/** Local app state: which update version the silent startup check has already notified about, and the selected UI theme. */
 public class AppPreferences {
 
     private static final String KEY_LAST_NOTIFIED_UPDATE_VERSION = "lastNotifiedUpdateVersion";
+    private static final String KEY_THEME = "theme";
+    private static final String DEFAULT_THEME = "Flat Light";
 
     private final Preferences prefs;
 
@@ -24,5 +26,13 @@ public class AppPreferences {
 
     public void setLastNotifiedUpdateVersion(String version) {
         prefs.put(KEY_LAST_NOTIFIED_UPDATE_VERSION, version);
+    }
+
+    public String getTheme() {
+        return prefs.get(KEY_THEME, DEFAULT_THEME);
+    }
+
+    public void setTheme(String themeName) {
+        prefs.put(KEY_THEME, themeName);
     }
 }

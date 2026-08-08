@@ -1,5 +1,4 @@
 package com.ourgiant.crypt;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.ourgiant.crypt.gpg.GpgOperations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -533,8 +532,8 @@ public class GPGDecryptor extends JFrame {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
         SwingUtilities.invokeLater(() -> {
-            if (!FlatLightLaf.setup()) {
-                log.warn("FlatLaf setup failed; falling back to default look and feel");
+            if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
+                log.warn("Theme setup failed; falling back to default look and feel");
             }
             new GPGDecryptor().setVisible(true);
         });

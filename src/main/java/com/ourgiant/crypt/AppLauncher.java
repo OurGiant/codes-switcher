@@ -1,6 +1,5 @@
 package com.ourgiant.crypt;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import com.ourgiant.crypt.util.UpdateChecker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +72,7 @@ public class AppLauncher extends JFrame {
         fileMenu.add(exitItem);
 
         menuBar.add(fileMenu);
+        menuBar.add(createThemeMenu());
 
         JMenu helpMenu = new JMenu("Help");
         JMenuItem aboutItem = new JMenuItem("About");
@@ -81,6 +81,27 @@ public class AppLauncher extends JFrame {
         menuBar.add(helpMenu);
 
         return menuBar;
+    }
+
+    private static JMenu createThemeMenu() {
+        JMenu themeMenu = new JMenu("Theme");
+        AppPreferences preferences = new AppPreferences();
+        String currentTheme = preferences.getTheme();
+
+        ButtonGroup group = new ButtonGroup();
+        for (String themeName : ThemeManager.getAvailableThemeNames()) {
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(themeName, themeName.equals(currentTheme));
+            item.addActionListener(e -> {
+                if (ThemeManager.applyTheme(themeName)) {
+                    preferences.setTheme(themeName);
+                } else {
+                    log.warn("Failed to apply theme {}", themeName);
+                }
+            });
+            group.add(item);
+            themeMenu.add(item);
+        }
+        return themeMenu;
     }
 
     /**
@@ -127,8 +148,8 @@ public class AppLauncher extends JFrame {
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        if (!FlatLightLaf.setup()) {
-            log.warn("FlatLaf setup failed; falling back to default look and feel");
+        if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
+            log.warn("Theme setup failed; falling back to default look and feel");
         }
 
         SwingUtilities.invokeLater(() -> new AppLauncher().setVisible(true));
