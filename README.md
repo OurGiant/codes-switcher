@@ -1,5 +1,11 @@
 # GPG Decryptor & Universal Encoder/Decoder
 
+[![Build](https://github.com/OurGiant/codes-switcher/actions/workflows/build.yml/badge.svg)](https://github.com/OurGiant/codes-switcher/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/OurGiant/codes-switcher?label=Release)](https://github.com/OurGiant/codes-switcher/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/OurGiant/codes-switcher)](LICENSE)
+[![Java 24](https://img.shields.io/badge/Java-24-orange?logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Platforms](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)](#native-installers)
+
 A Java Swing desktop application combining two cryptography utilities: a GPG file decryptor and a universal text encoder/decoder.
 
 ## Tools
@@ -67,8 +73,9 @@ scripts for its desktop-entry integration.
 src/main/java/com/ourgiant/crypt/
 ├── AppLauncher.java           # Tool picker / entry point
 ├── AppVersion.java            # Reads the app's own version at runtime
-├── AppPreferences.java        # Local app state (last-notified update version)
+├── AppPreferences.java        # Local app state (last-notified update version, theme)
 ├── AboutDialog.java           # Help > About: version + update check
+├── ThemeManager.java          # FlatLaf theme selection/persistence
 ├── GPGDecryptor.java          # GPG file decryption UI (thin, delegates to gpg/)
 ├── GpgVersion.java            # GPG version comparison logic
 ├── TextCodec.java             # Encoding/decoding/hashing logic
@@ -89,6 +96,7 @@ src/main/java/com/ourgiant/crypt/
 - [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
 - [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
+- [Mockito](https://site.mockito.org/) 5.23.0 — test scope only
 
 ## License
 

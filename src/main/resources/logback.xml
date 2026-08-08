@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Console output kept deliberately: unlike a tray-resident app, this is launched directly
+         (java -jar or a double-clicked installer) for a single GPG-decrypt or encode/decode task,
+         often from a terminal in normal use, and there's no in-app "View Logs" menu item — the
+         rolling file below is the durable record, but STDOUT is still the most direct way to see
+         live logging while the app is running. -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
