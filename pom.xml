@@ -7,7 +7,7 @@
 
     <groupId>com.ourgiant.gpgutil</groupId>
     <artifactId>decrypter</artifactId>
-    <version>1.0.10</version>
+    <version>1.0.11</version>
     <packaging>jar</packaging>
 
     <name>GPG File Decryptor</name>

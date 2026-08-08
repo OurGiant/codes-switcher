@@ -1,6 +1,5 @@
 package com.ourgiant.crypt;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -245,8 +244,8 @@ public class EncodingDecodingApp extends JFrame {
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        if (!FlatLightLaf.setup()) {
-            log.warn("FlatLaf setup failed; falling back to default look and feel");
+        if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
+            log.warn("Theme setup failed; falling back to default look and feel");
         }
 
         // Create and show the application
