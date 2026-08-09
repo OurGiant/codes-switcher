@@ -1,11 +1,5 @@
 # GPG Decryptor & Universal Encoder/Decoder
 
-[![Build](https://github.com/OurGiant/codes-switcher/actions/workflows/build.yml/badge.svg)](https://github.com/OurGiant/codes-switcher/actions/workflows/build.yml)
-[![Latest Release](https://img.shields.io/github/v/release/OurGiant/codes-switcher?label=Release)](https://github.com/OurGiant/codes-switcher/releases/latest)
-[![License: MIT](https://img.shields.io/github/license/OurGiant/codes-switcher)](LICENSE)
-[![Java 24](https://img.shields.io/badge/Java-24-orange?logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Platforms](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)](#native-installers)
-
 A Java Swing desktop application combining two cryptography utilities: a GPG file decryptor and a universal text encoder/decoder.
 
 ## Tools

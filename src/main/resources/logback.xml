@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Console output kept deliberately: unlike a tray-resident app, this is launched directly
-         (java -jar or a double-clicked installer) for a single GPG-decrypt or encode/decode task,
-         often from a terminal in normal use, and there's no in-app "View Logs" menu item — the
-         rolling file below is the durable record, but STDOUT is still the most direct way to see
-         live logging while the app is running. -->
+    <!-- STDOUT is kept deliberately, even though the packaged app is normally started via a
+         double-clicked native installer rather than lived-in from a terminal: the FILE appender
+         below is the durable record for that normal case, but this jar is also run directly with
+         `java -jar` during development and manual troubleshooting, where console output is the
+         quickest way to see logging live. There's no in-app "View Logs" menu item, so dropping
+         STDOUT would leave that path with no immediate feedback at all. -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
