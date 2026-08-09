@@ -67,8 +67,9 @@ scripts for its desktop-entry integration.
 src/main/java/com/ourgiant/crypt/
 ├── AppLauncher.java           # Tool picker / entry point
 ├── AppVersion.java            # Reads the app's own version at runtime
-├── AppPreferences.java        # Local app state (last-notified update version)
+├── AppPreferences.java        # Local app state (last-notified update version, theme)
 ├── AboutDialog.java           # Help > About: version + update check
+├── ThemeManager.java          # FlatLaf theme selection/persistence
 ├── GPGDecryptor.java          # GPG file decryption UI (thin, delegates to gpg/)
 ├── GpgVersion.java            # GPG version comparison logic
 ├── TextCodec.java             # Encoding/decoding/hashing logic
@@ -89,6 +90,7 @@ src/main/java/com/ourgiant/crypt/
 - [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
 - [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
+- [Mockito](https://site.mockito.org/) 5.23.0 — test scope only
 
 ## License
 
