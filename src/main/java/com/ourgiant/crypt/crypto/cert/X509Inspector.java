@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -11,6 +12,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -89,6 +91,24 @@ public final class X509Inspector {
             return certs;
         } catch (CertificateException e) {
             throw new CertParseException("Failed to parse certificate: " + e.getMessage(), e);
+        }
+    }
+
+    /** Renders one or more certificates back as concatenated PEM text, leaf-first order preserved. */
+    public static String toPemChain(List<X509Certificate> certs) {
+        StringBuilder sb = new StringBuilder();
+        for (X509Certificate cert : certs) {
+            sb.append(toPem(cert));
+        }
+        return sb.toString();
+    }
+
+    public static String toPem(X509Certificate cert) {
+        try {
+            String encoded = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII)).encodeToString(cert.getEncoded());
+            return "-----BEGIN CERTIFICATE-----\n" + encoded + "\n-----END CERTIFICATE-----\n";
+        } catch (CertificateEncodingException e) {
+            throw new CertParseException("Failed to encode certificate: " + e.getMessage(), e);
         }
     }
 

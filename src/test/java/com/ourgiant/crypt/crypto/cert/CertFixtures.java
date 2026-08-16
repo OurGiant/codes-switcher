@@ -30,6 +30,19 @@ final class CertFixtures {
     /** @param startDateOffset e.g. "-400d" to backdate the cert's start (used for an already-expired fixture); null for "now". */
     static X509Certificate selfSigned(Path tempDir, String alias, String dname, String keyAlg,
             String groupNameOrKeySize, int validityDays, String startDateOffset) throws Exception {
+        return (X509Certificate) selfSignedKeyStore(tempDir, alias, dname, keyAlg, groupNameOrKeySize, validityDays,
+            startDateOffset).getCertificate(alias);
+    }
+
+    /** Same as {@link #selfSigned}, but returns the whole keystore (cert + private key) - for tests that need to
+     * stand up a real TLS server, not just inspect the resulting certificate. */
+    static KeyStore selfSignedKeyStore(Path tempDir, String alias, String dname, String keyAlg,
+            String groupNameOrKeySize, int validityDays) throws Exception {
+        return selfSignedKeyStore(tempDir, alias, dname, keyAlg, groupNameOrKeySize, validityDays, null);
+    }
+
+    static KeyStore selfSignedKeyStore(Path tempDir, String alias, String dname, String keyAlg,
+            String groupNameOrKeySize, int validityDays, String startDateOffset) throws Exception {
         File keystoreFile = tempDir.resolve(alias + ".p12").toFile();
 
         var command = new java.util.ArrayList<String>(java.util.List.of(
@@ -62,7 +75,7 @@ final class CertFixtures {
         try (FileInputStream in = new FileInputStream(keystoreFile)) {
             keyStore.load(in, "changeit".toCharArray());
         }
-        return (X509Certificate) keyStore.getCertificate(alias);
+        return keyStore;
     }
 
     /**

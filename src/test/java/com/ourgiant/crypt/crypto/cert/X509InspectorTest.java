@@ -101,9 +101,19 @@ class X509InspectorTest {
         assertEquals(2, parsed.size());
     }
 
-    private static String toPem(X509Certificate cert) throws Exception {
-        return "-----BEGIN CERTIFICATE-----\n"
-            + java.util.Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(cert.getEncoded())
-            + "\n-----END CERTIFICATE-----\n";
+    @Test
+    void toPemChainRoundTripsThroughParseChain(@TempDir Path tempDir) throws Exception {
+        X509Certificate[] chain = CertFixtures.caSignedLeafChain(tempDir);
+
+        String pem = X509Inspector.toPemChain(List.of(chain[0], chain[1]));
+        List<X509Certificate> parsed = X509Inspector.parseChain(pem);
+
+        assertEquals(2, parsed.size());
+        assertEquals(chain[0], parsed.get(0));
+        assertEquals(chain[1], parsed.get(1));
+    }
+
+    private static String toPem(X509Certificate cert) {
+        return X509Inspector.toPem(cert);
     }
 }

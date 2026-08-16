@@ -1,6 +1,7 @@
 package com.ourgiant.crypt;
 
 import com.ourgiant.crypt.crypto.cert.ChainValidator;
+import com.ourgiant.crypt.crypto.cert.TlsChainFetcher;
 import com.ourgiant.crypt.crypto.cert.X509Inspector;
 import com.ourgiant.crypt.crypto.jwt.JwksKeys;
 import com.ourgiant.crypt.crypto.jwt.JwtParser;
@@ -46,6 +47,8 @@ public class CryptoInspectorApp extends JFrame {
     private JButton openFileButton;
     private JButton inspectButton;
     private JTextArea certResultArea;
+    private JTextField tlsEndpointField;
+    private JButton fetchTlsButton;
 
     public CryptoInspectorApp() {
         setTitle("JWT / X.509 Inspector");
@@ -235,17 +238,7 @@ public class CryptoInspectorApp extends JFrame {
         certInput.setLineWrap(true);
         certInput.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         topPanel.add(new JScrollPane(certInput), BorderLayout.CENTER);
-
-        openFileButton = new JButton("Open File...");
-        openFileButton.addActionListener(e -> openCertFile());
-
-        inspectButton = new JButton("Inspect");
-        inspectButton.addActionListener(e -> performCertInspection());
-
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonRow.add(openFileButton);
-        buttonRow.add(inspectButton);
-        topPanel.add(buttonRow, BorderLayout.SOUTH);
+        topPanel.add(buildCertActionsPanel(), BorderLayout.SOUTH);
 
         panel.add(topPanel, BorderLayout.NORTH);
 
@@ -256,6 +249,67 @@ public class CryptoInspectorApp extends JFrame {
         panel.add(new JScrollPane(certResultArea), BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private JPanel buildCertActionsPanel() {
+        JPanel container = new JPanel(new BorderLayout(4, 4));
+
+        JPanel tlsRow = new JPanel(new BorderLayout(4, 4));
+        tlsRow.add(new JLabel("Fetch from TLS host (e.g. example.com:443 or https://example.com):"), BorderLayout.NORTH);
+        tlsEndpointField = new JTextField();
+        tlsRow.add(tlsEndpointField, BorderLayout.CENTER);
+        fetchTlsButton = new JButton("Fetch");
+        fetchTlsButton.addActionListener(e -> performTlsFetch());
+        JPanel fetchButtonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        fetchButtonRow.add(fetchTlsButton);
+        tlsRow.add(fetchButtonRow, BorderLayout.SOUTH);
+        container.add(tlsRow, BorderLayout.NORTH);
+
+        openFileButton = new JButton("Open File...");
+        openFileButton.addActionListener(e -> openCertFile());
+
+        inspectButton = new JButton("Inspect");
+        inspectButton.addActionListener(e -> performCertInspection());
+
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonRow.add(openFileButton);
+        buttonRow.add(inspectButton);
+        container.add(buttonRow, BorderLayout.SOUTH);
+
+        return container;
+    }
+
+    private void performTlsFetch() {
+        String endpoint = tlsEndpointField.getText().trim();
+        if (endpoint.isEmpty()) {
+            showMessage("Enter a host, host:port, or URL first.", "Input Required");
+            return;
+        }
+
+        fetchTlsButton.setEnabled(false);
+        certResultArea.setText("Connecting to " + endpoint + "...");
+
+        new SwingWorker<List<X509Certificate>, Void>() {
+            @Override
+            protected List<X509Certificate> doInBackground() {
+                return TlsChainFetcher.fetchChain(endpoint);
+            }
+
+            @Override
+            protected void done() {
+                fetchTlsButton.setEnabled(true);
+                try {
+                    List<X509Certificate> chain = get();
+                    certInput.setText(X509Inspector.toPemChain(chain));
+                    certResultArea.setText(formatCertReport(chain));
+                    certResultArea.setCaretPosition(0);
+                } catch (Exception e) {
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    log.warn("TLS chain fetch failed for {}", endpoint, cause);
+                    certResultArea.setText("=== ERROR ===\n" + cause.getMessage());
+                }
+            }
+        }.execute();
     }
 
     private void openCertFile() {
