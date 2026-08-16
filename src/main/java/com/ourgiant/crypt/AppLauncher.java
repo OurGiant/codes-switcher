@@ -16,7 +16,7 @@ public class AppLauncher extends JFrame {
     public AppLauncher() {
         setTitle("Codes Switcher v" + AppVersion.get());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(360, 180);
+        setSize(360, 220);
         setLocationRelativeTo(null);
         setLayout(new GridLayout(0, 1, 10, 10));
         Image icon = loadAppIcon();
@@ -39,10 +39,17 @@ public class AppLauncher extends JFrame {
             dispose();
         });
 
+        JButton cryptoInspectorButton = new JButton("JWT / X.509 Inspector");
+        cryptoInspectorButton.addActionListener(e -> {
+            new CryptoInspectorApp().setVisible(true);
+            dispose();
+        });
+
         ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         add(label);
         add(gpgButton);
         add(encodingButton);
+        add(cryptoInspectorButton);
 
         setJMenuBar(createMenuBar(this));
         checkForUpdateAndNotifyIfNewer();

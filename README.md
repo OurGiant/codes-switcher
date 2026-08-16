@@ -21,6 +21,20 @@ Encode and decode text using a wide range of formats from a single interface.
 - JWT (decode only)
 - SHA-256 / SHA-512 / MD5 hashing
 
+### JWT / X.509 Inspector
+A third tool for signature verification and certificate inspection — extends beyond the Encoder/Decoder's JWT decode-only support.
+
+**JWT Verifier:**
+- HMAC (HS256/384/512) verification against a shared secret, RSA/EC (RS256/384/512, ES256/384/512) against a pasted PEM public key or a JWKS URL
+- Explicitly rejects `alg: none`, and refuses to verify a token whose algorithm doesn't match the family of key material you provided (e.g. an HS256 token against an RSA public key) — this is a structural defense against algorithm-confusion attacks (RFC 8725 §3.1/3.2), not just a warning
+- `exp`/`nbf` checked against the current time — valid / expired / not-yet-valid / no time claims, not just raw decode
+
+**X.509 Certificate Inspector:**
+- Parses a pasted PEM certificate (or a concatenated chain: leaf, intermediate(s), root)
+- Shows subject, issuer, validity window, SANs, key usage, and SHA-256 fingerprint
+- Flags expired, self-signed (with an independent self-signature check, not just subject==issuer), and weak-key (RSA < 2048 bits, EC < 224-bit curve) certificates
+- Basic chain validation when more than one certificate is supplied — verifies each certificate's signature against the next one's public key
+
 ## Prerequisites
 
 - Java 24 or higher
@@ -74,10 +88,16 @@ src/main/java/com/ourgiant/crypt/
 ├── GpgVersion.java            # GPG version comparison logic
 ├── TextCodec.java             # Encoding/decoding/hashing logic
 ├── EncodingDecodingApp.java   # Universal encoder/decoder UI
+├── CryptoInspectorApp.java    # JWT Verifier + X.509 Inspector UI (two tabs)
 ├── gpg/
 │   ├── GpgOperations.java        # GPG install/decrypt domain logic (no Swing)
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
+├── crypto/
+│   ├── jwt/                      # JwtParser, HmacVerifier, RsaEcVerifier, PemPublicKeys,
+│   │                              # JwksKeys/JwksFetcher, JwtVerification (orchestrator) -
+│   │                              # no Swing
+│   └── cert/                     # X509Inspector, ChainValidator - no Swing
 └── util/
     ├── UpdateChecker.java        # GitHub releases API check (no Swing)
     ├── HttpClientFactory.java    # HttpClient w/ Windows trust-store support
@@ -88,7 +108,8 @@ src/main/java/com/ourgiant/crypt/
 
 - [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (+ `flatlaf-intellij-themes`, `flatlaf-extras`) — UI theming
 - [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
-- [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response
+- [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response, JWT header/payload JSON, and JWKS documents
+- No new dependency for JWT/X.509 crypto itself — `java.security`/`javax.crypto`/`java.security.cert` (JDK-only) cover HMAC/RSA/EC signature verification, JWK reconstruction, and certificate parsing
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
 - [Mockito](https://site.mockito.org/) 5.23.0 — test scope only
 
