@@ -10,8 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.cert.X509Certificate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -39,6 +43,7 @@ public class CryptoInspectorApp extends JFrame {
     private JTextArea jwtResultArea;
 
     private JTextArea certInput;
+    private JButton openFileButton;
     private JButton inspectButton;
     private JTextArea certResultArea;
 
@@ -231,9 +236,14 @@ public class CryptoInspectorApp extends JFrame {
         certInput.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         topPanel.add(new JScrollPane(certInput), BorderLayout.CENTER);
 
+        openFileButton = new JButton("Open File...");
+        openFileButton.addActionListener(e -> openCertFile());
+
         inspectButton = new JButton("Inspect");
         inspectButton.addActionListener(e -> performCertInspection());
+
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonRow.add(openFileButton);
         buttonRow.add(inspectButton);
         topPanel.add(buttonRow, BorderLayout.SOUTH);
 
@@ -246,6 +256,23 @@ public class CryptoInspectorApp extends JFrame {
         panel.add(new JScrollPane(certResultArea), BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private void openCertFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Open Certificate File");
+        fileChooser.setFileFilter(new FileNameExtensionFilter(
+            "Certificate files (*.pem, *.crt, *.cer)", "pem", "crt", "cer"));
+        int result = fileChooser.showOpenDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = fileChooser.getSelectedFile();
+        try {
+            certInput.setText(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+        } catch (IOException ex) {
+            showMessage("Failed to read \"" + file.getName() + "\": " + ex.getMessage(), "Open File Failed");
+        }
     }
 
     private void performCertInspection() {
