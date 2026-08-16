@@ -16,7 +16,7 @@ public class AppLauncher extends JFrame {
     public AppLauncher() {
         setTitle("Codes Switcher v" + AppVersion.get());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(360, 220);
+        setSize(640, 480);
         setLocationRelativeTo(null);
         setLayout(new GridLayout(0, 1, 10, 10));
         Image icon = loadAppIcon();
