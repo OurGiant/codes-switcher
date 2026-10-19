@@ -9,7 +9,12 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
+import static com.ourgiant.crypt.TextCodec.ASCII85;
+import static com.ourgiant.crypt.TextCodec.BASE32;
+import static com.ourgiant.crypt.TextCodec.BASE58;
 import static com.ourgiant.crypt.TextCodec.BASE64;
+import static com.ourgiant.crypt.TextCodec.DEFLATE;
+import static com.ourgiant.crypt.TextCodec.GZIP;
 import static com.ourgiant.crypt.TextCodec.BINARY;
 import static com.ourgiant.crypt.TextCodec.HEX;
 import static com.ourgiant.crypt.TextCodec.HTML;
@@ -19,6 +24,7 @@ import static com.ourgiant.crypt.TextCodec.MD5;
 import static com.ourgiant.crypt.TextCodec.ROT13;
 import static com.ourgiant.crypt.TextCodec.SHA256;
 import static com.ourgiant.crypt.TextCodec.SHA512;
+import static com.ourgiant.crypt.TextCodec.UNICODE;
 import static com.ourgiant.crypt.TextCodec.URL;
 
 public class EncodingDecodingApp extends JFrame {
@@ -62,8 +68,8 @@ public class EncodingDecodingApp extends JFrame {
     private void initializeComponents() {
         // Method selection
         methodComboBox = new JComboBox<>(new String[]{
-            BASE64, URL, HTML, HEX, BINARY, ROT13, 
-            JSON, JWT, SHA256, SHA512, MD5
+            BASE64, BASE32, BASE58, ASCII85, URL, HTML, HEX, BINARY, ROT13,
+            JSON, UNICODE, GZIP, DEFLATE, JWT, SHA256, SHA512, MD5
         });
         methodComboBox.setSelectedIndex(0);
         
