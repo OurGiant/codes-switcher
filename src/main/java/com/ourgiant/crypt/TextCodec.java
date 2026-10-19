@@ -35,6 +35,64 @@ public class TextCodec {
             BASE64, BASE32, BASE58, ASCII85, URL, HTML, HEX, BINARY, ROT13,
             JSON, UNICODE, GZIP, DEFLATE, JWT, SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5);
 
+    /** Methods whose input or output is naturally raw bytes, so files can go in and out unchanged. */
+    public static final java.util.List<String> BYTE_METHODS = java.util.List.of(
+            BASE64, BASE32, BASE58, ASCII85, HEX, BINARY, GZIP, DEFLATE,
+            SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5);
+
+    /** Encodes raw bytes (e.g. a file) with a byte-capable method. */
+    public static String encodeBytes(byte[] data, String method) throws Exception {
+        return switch (method) {
+            case BASE64 -> Base64.getEncoder().encodeToString(data);
+            case BASE32 -> ExtraCodecs.base32Encode(data);
+            case BASE58 -> ExtraCodecs.base58Encode(data);
+            case ASCII85 -> ExtraCodecs.ascii85Encode(data);
+            case HEX -> bytesToHex(data);
+            case BINARY -> {
+                StringBuilder b = new StringBuilder(data.length * 8);
+                for (byte x : data) {
+                    b.append(String.format("%8s", Integer.toBinaryString(x & 0xFF)).replace(' ', '0'));
+                }
+                yield b.toString();
+            }
+            case GZIP -> ExtraCodecs.gzipEncode(data);
+            case DEFLATE -> ExtraCodecs.deflateEncode(data);
+            case SHA256 -> bytesToHex(MessageDigest.getInstance("SHA-256").digest(data));
+            case SHA512 -> bytesToHex(MessageDigest.getInstance("SHA-512").digest(data));
+            case SHA3_256 -> bytesToHex(MessageDigest.getInstance("SHA3-256").digest(data));
+            case SHA3_512 -> bytesToHex(MessageDigest.getInstance("SHA3-512").digest(data));
+            case SHA1 -> bytesToHex(MessageDigest.getInstance("SHA-1").digest(data));
+            case MD5 -> bytesToHex(MessageDigest.getInstance("MD5").digest(data));
+            case BLAKE2B -> bytesToHex(com.ourgiant.crypt.crypto.Blake2b.hash512(data));
+            default -> throw new IllegalArgumentException(method + " works on text, not raw file bytes");
+        };
+    }
+
+    /** Decodes to raw bytes (e.g. to save a decoded file) with a byte-capable, decodable method. */
+    public static byte[] decodeBytes(String input, String method) throws Exception {
+        return switch (method) {
+            case BASE64 -> Base64.getMimeDecoder().decode(input.strip());
+            case BASE32 -> ExtraCodecs.base32Decode(input);
+            case BASE58 -> ExtraCodecs.base58Decode(input);
+            case ASCII85 -> ExtraCodecs.ascii85Decode(input);
+            case HEX -> hexToBytes(input.replaceAll("\\s+", ""));
+            case BINARY -> {
+                String b = input.replaceAll("\\s+", "");
+                if (b.length() % 8 != 0) {
+                    throw new IllegalArgumentException("Binary string length must be divisible by 8");
+                }
+                byte[] out = new byte[b.length() / 8];
+                for (int i = 0; i < out.length; i++) {
+                    out[i] = (byte) Integer.parseInt(b.substring(i * 8, i * 8 + 8), 2);
+                }
+                yield out;
+            }
+            case GZIP -> ExtraCodecs.gzipDecode(input);
+            case DEFLATE -> ExtraCodecs.deflateDecode(input);
+            default -> throw new IllegalArgumentException(method + " can't be decoded to raw bytes");
+        };
+    }
+
     /** True for one-way hashes, which can be encoded (hashed) but never decoded. */
     public static boolean isHash(String method) {
         return method.endsWith("(Hash)");
