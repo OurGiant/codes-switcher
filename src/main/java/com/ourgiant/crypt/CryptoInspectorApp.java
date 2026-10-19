@@ -51,6 +51,7 @@ public class CryptoInspectorApp extends JFrame {
     private JTextArea certResultArea;
     private JTextField tlsEndpointField;
     private JButton fetchTlsButton;
+    private JTabbedPane tabs;
 
     public CryptoInspectorApp() {
         setTitle("JWT / X.509 Inspector");
@@ -64,9 +65,10 @@ public class CryptoInspectorApp extends JFrame {
             setIconImage(icon);
         }
 
-        JTabbedPane tabs = new JTabbedPane();
+        tabs = new JTabbedPane();
         tabs.addTab("JWT Verifier", buildJwtTab());
         tabs.addTab("X.509 Inspector", buildCertTab());
+        tabs.addTab("Key Generator", new KeyGeneratorPanel(this::openInCertInspector));
         add(tabs);
     }
 
@@ -313,6 +315,13 @@ public class CryptoInspectorApp extends JFrame {
                 }
             }
         }.execute();
+    }
+
+    /** Shows a generated certificate in the X.509 Inspector tab and inspects it. */
+    private void openInCertInspector(String pem) {
+        certInput.setText(pem);
+        tabs.setSelectedIndex(tabs.indexOfTab("X.509 Inspector"));
+        performCertInspection();
     }
 
     private void openCertFile() {
