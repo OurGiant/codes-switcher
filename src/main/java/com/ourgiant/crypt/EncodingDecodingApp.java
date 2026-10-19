@@ -73,10 +73,7 @@ public class EncodingDecodingApp extends JFrame {
 
     private void initializeComponents() {
         // Method selection
-        methodComboBox = new JComboBox<>(new String[]{
-            BASE64, BASE32, BASE58, ASCII85, URL, HTML, HEX, BINARY, ROT13,
-            JSON, UNICODE, GZIP, DEFLATE, JWT, SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5
-        });
+        methodComboBox = new JComboBox<>(TextCodec.METHODS.toArray(String[]::new));
         methodComboBox.setSelectedIndex(0);
         
         // Text areas
@@ -192,6 +189,7 @@ public class EncodingDecodingApp extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Text Codecs", codecTab);
+        tabs.addTab("Recipe", new RecipePanel());
         tabs.addTab("HMAC", new HmacPanel());
         tabs.addTab("Blowfish", buildBlowfishTab());
 
