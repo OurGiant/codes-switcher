@@ -192,4 +192,39 @@ class GpgOperationsTest {
             System.setProperty("user.home", originalUserHome);
         }
     }
+
+    @Test
+    void encryptBuildsExpectedCommandAndSendsPassphraseOnStdin() throws Exception {
+        ByteArrayOutputStream stdin = new ByteArrayOutputStream();
+        when(process.getInputStream()).thenReturn(streamOf(""));
+        when(process.getErrorStream()).thenReturn(streamOf(""));
+        when(process.getOutputStream()).thenReturn(stdin);
+        when(process.waitFor()).thenReturn(2);
+        List<List<String>> commands = new ArrayList<>();
+        GpgOperations ops = new GpgOperations("gpg", cmd -> { commands.add(cmd); return process; });
+
+        boolean ok = ops.encryptFile("in.txt", "out.asc", List.of("bob@example.com"), List.of("carol.asc"),
+                true, true, "alice@example.com", "s3cret", m -> { });
+
+        assertFalse(ok, "exit code 2 is a failure");
+        assertEquals(List.of("gpg", "--batch", "--yes", "--armor", "--trust-model", "always",
+                "--recipient", "bob@example.com", "--recipient-file", "carol.asc",
+                "--pinentry-mode", "loopback", "--passphrase-fd", "0", "--local-user", "alice@example.com", "--sign",
+                "--output", "out.asc", "--encrypt", "in.txt"), commands.get(0));
+        assertEquals("s3cret\n", stdin.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void passphraseIsNeverPutOnTheCommandLine() throws Exception {
+        when(process.getInputStream()).thenReturn(streamOf(""));
+        when(process.getErrorStream()).thenReturn(streamOf(""));
+        when(process.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+        when(process.waitFor()).thenReturn(0);
+        List<List<String>> commands = new ArrayList<>();
+        GpgOperations ops = new GpgOperations("gpg", cmd -> { commands.add(cmd); return process; });
+        ops.signFile("in", "out", GpgOperations.SignMode.CLEARSIGN, true, "", "hunter2", m -> { });
+        assertFalse(String.join(" ", commands.get(0)).contains("hunter2"));
+        assertTrue(commands.get(0).contains("--clearsign"));
+        assertFalse(commands.get(0).contains("--armor"), "clearsign output is already text");
+    }
 }
