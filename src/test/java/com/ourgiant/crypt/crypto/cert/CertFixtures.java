@@ -120,7 +120,7 @@ final class CertFixtures {
         return new X509Certificate[]{leafCert, caCert};
     }
 
-    private static void run(String... args) throws Exception {
+    static void run(String... args) throws Exception {
         var command = new java.util.ArrayList<String>();
         command.add(KEYTOOL);
         command.addAll(java.util.List.of(args));
