@@ -23,6 +23,7 @@ public class GPGDecryptor extends JFrame {
     private JButton installGPGButton;
     private JLabel statusLabel;
     private JLabel gpgVersionLabel;
+    private JTabbedPane operationTabs;
 
     private static final String GPG_TARBALL_URL = "https://gnupg.org/ftp/gcrypt/gnupg/gnupg-2.4.8.tar.bz2";
     private static final String REQUIRED_VERSION = "2.4.8";
@@ -30,7 +31,7 @@ public class GPGDecryptor extends JFrame {
     private final GpgOperations gpgOperations = new GpgOperations(gpgPath);
 
     public GPGDecryptor() {
-        setTitle("GPG File Decryptor");
+        setTitle("GPG Tools");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700);
         setLocationRelativeTo(null);
@@ -133,7 +134,6 @@ public class GPGDecryptor extends JFrame {
         decryptButton = new JButton("Decrypt File");
         decryptButton.setFont(new Font("Arial", Font.BOLD, 14));
         decryptButton.addActionListener(e -> decryptFile());
-        buttonPanel.add(decryptButton);
 
         installGPGButton = new JButton("Install/Update GPG");
         installGPGButton.setFont(new Font("Arial", Font.BOLD, 12));
@@ -157,9 +157,27 @@ public class GPGDecryptor extends JFrame {
         bottomPanel.add(buttonPanel, BorderLayout.NORTH);
         bottomPanel.add(statusPanel, BorderLayout.SOUTH);
 
+        // Decrypt keeps its original form; Encrypt/Sign/Verify/Keys share the log and status line below.
+        JPanel decryptTab = new JPanel(new BorderLayout(8, 8));
+        decryptTab.add(filePanel, BorderLayout.NORTH);
+        JPanel decryptButtonRow = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        decryptButtonRow.add(decryptButton);
+        decryptTab.add(decryptButtonRow, BorderLayout.CENTER);
+
+        GpgPanels.Context ctx = new GpgPanels.Context(gpgOperations, this::log, statusLabel::setText);
+        operationTabs = new JTabbedPane();
+        operationTabs.addTab("Decrypt", decryptTab);
+        operationTabs.addTab("Encrypt", new GpgPanels.EncryptPanel(ctx));
+        operationTabs.addTab("Sign", new GpgPanels.SignPanel(ctx));
+        operationTabs.addTab("Verify", new GpgPanels.VerifyPanel(ctx));
+        operationTabs.addTab("Keys", new GpgPanels.KeysPanel(ctx));
+        ctx.refreshKeys();
+
         // Add components to main panel
-        mainPanel.add(filePanel, BorderLayout.NORTH);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, operationTabs, scrollPane);
+        split.setResizeWeight(0.65);
+        split.setBorder(null);
+        mainPanel.add(split, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(mainPanel);

@@ -27,7 +27,7 @@ public class AppLauncher extends JFrame {
         JLabel label = new JLabel("Choose a tool", SwingConstants.CENTER);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 16f));
 
-        JButton gpgButton = new JButton("GPG Decryptor");
+        JButton gpgButton = new JButton("GPG Tools");
         gpgButton.addActionListener(e -> {
             new GPGDecryptor().setVisible(true);
             dispose();
