@@ -38,4 +38,12 @@ class ThemeManagerTest {
         assertTrue(ThemeManager.applyTheme("Flat Light"));
         assertFalse(new java.awt.Color(0x0a110c).equals(javax.swing.UIManager.getColor("Panel.background")));
     }
+
+    @Test
+    void planetThemeIsMagentaAndCyanOnPurple() {
+        assertTrue(ThemeManager.applyPlanetTheme());
+        assertEquals(new java.awt.Color(0x1a0033), javax.swing.UIManager.getColor("Panel.background"));
+        assertEquals(new java.awt.Color(0x5ff8ff), javax.swing.UIManager.getColor("Label.foreground"));
+        assertTrue(ThemeManager.applyTheme("Flat Light"));
+    }
 }

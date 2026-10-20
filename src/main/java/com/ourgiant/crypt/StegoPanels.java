@@ -554,11 +554,13 @@ final class StegoPanels {
                     revealButton.setEnabled(true);
                     try {
                         revealed = get();
+                        MagicWord.right();
                         status.setForeground(OK);
                         if (revealed.isText()) {
                             status.setText("✔ Found a hidden message (" + revealed.text().length() + " characters)");
                             resultArea.setText(revealed.text());
                             resultArea.setCaretPosition(0);
+                            TextReveal.play(resultArea);
                         } else {
                             status.setText("✔ Found a hidden file: " + revealed.fileName() + " (" + formatSize(revealed.data().length) + ")");
                             resultArea.setText("Hidden file: " + revealed.fileName() + "\nSize: " + formatSize(revealed.data().length)
@@ -575,6 +577,9 @@ final class StegoPanels {
                     } catch (ExecutionException e) {
                         Throwable c = e.getCause();
                         boolean notFound = c instanceof Steganography.NotFoundException;
+                        if (notFound) {
+                            MagicWord.wrong(RevealPanel.this);
+                        }
                         status.setForeground(notFound ? WARN : BAD);
                         status.setText(notFound && k.images() ? "? No hidden message found in this image for those three key images"
                                 : (notFound ? "? " : "✘ ") + c.getMessage());
