@@ -17,8 +17,91 @@ public class TextCodec {
     public static final String SHA256 = "SHA-256 (Hash)";
     public static final String SHA512 = "SHA-512 (Hash)";
     public static final String MD5 = "MD5 (Hash)";
+    public static final String SHA1 = "SHA-1 (Hash)";
+    public static final String SHA3_256 = "SHA3-256 (Hash)";
+    public static final String SHA3_512 = "SHA3-512 (Hash)";
+    public static final String BLAKE2B = "BLAKE2b-512 (Hash)";
     public static final String JSON = "JSON Escape";
     public static final String JWT = "JWT (Decode Only)";
+    public static final String BASE32 = "Base32";
+    public static final String BASE58 = "Base58";
+    public static final String ASCII85 = "ASCII85";
+    public static final String GZIP = "Gzip (as Base64)";
+    public static final String DEFLATE = "Deflate, raw (as Base64)";
+    public static final String UNICODE = "Unicode Escape";
+
+    /** Every method, in the order the UI lists them. */
+    public static final java.util.List<String> METHODS = java.util.List.of(
+            BASE64, BASE32, BASE58, ASCII85, URL, HTML, HEX, BINARY, ROT13,
+            JSON, UNICODE, GZIP, DEFLATE, JWT, SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5);
+
+    /** Methods whose input or output is naturally raw bytes, so files can go in and out unchanged. */
+    public static final java.util.List<String> BYTE_METHODS = java.util.List.of(
+            BASE64, BASE32, BASE58, ASCII85, HEX, BINARY, GZIP, DEFLATE,
+            SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5);
+
+    /** Encodes raw bytes (e.g. a file) with a byte-capable method. */
+    public static String encodeBytes(byte[] data, String method) throws Exception {
+        return switch (method) {
+            case BASE64 -> Base64.getEncoder().encodeToString(data);
+            case BASE32 -> ExtraCodecs.base32Encode(data);
+            case BASE58 -> ExtraCodecs.base58Encode(data);
+            case ASCII85 -> ExtraCodecs.ascii85Encode(data);
+            case HEX -> bytesToHex(data);
+            case BINARY -> {
+                StringBuilder b = new StringBuilder(data.length * 8);
+                for (byte x : data) {
+                    b.append(String.format("%8s", Integer.toBinaryString(x & 0xFF)).replace(' ', '0'));
+                }
+                yield b.toString();
+            }
+            case GZIP -> ExtraCodecs.gzipEncode(data);
+            case DEFLATE -> ExtraCodecs.deflateEncode(data);
+            case SHA256 -> bytesToHex(MessageDigest.getInstance("SHA-256").digest(data));
+            case SHA512 -> bytesToHex(MessageDigest.getInstance("SHA-512").digest(data));
+            case SHA3_256 -> bytesToHex(MessageDigest.getInstance("SHA3-256").digest(data));
+            case SHA3_512 -> bytesToHex(MessageDigest.getInstance("SHA3-512").digest(data));
+            case SHA1 -> bytesToHex(MessageDigest.getInstance("SHA-1").digest(data));
+            case MD5 -> bytesToHex(MessageDigest.getInstance("MD5").digest(data));
+            case BLAKE2B -> bytesToHex(com.ourgiant.crypt.crypto.Blake2b.hash512(data));
+            default -> throw new IllegalArgumentException(method + " works on text, not raw file bytes");
+        };
+    }
+
+    /** Decodes to raw bytes (e.g. to save a decoded file) with a byte-capable, decodable method. */
+    public static byte[] decodeBytes(String input, String method) throws Exception {
+        return switch (method) {
+            case BASE64 -> Base64.getMimeDecoder().decode(input.strip());
+            case BASE32 -> ExtraCodecs.base32Decode(input);
+            case BASE58 -> ExtraCodecs.base58Decode(input);
+            case ASCII85 -> ExtraCodecs.ascii85Decode(input);
+            case HEX -> hexToBytes(input.replaceAll("\\s+", ""));
+            case BINARY -> {
+                String b = input.replaceAll("\\s+", "");
+                if (b.length() % 8 != 0) {
+                    throw new IllegalArgumentException("Binary string length must be divisible by 8");
+                }
+                byte[] out = new byte[b.length() / 8];
+                for (int i = 0; i < out.length; i++) {
+                    out[i] = (byte) Integer.parseInt(b.substring(i * 8, i * 8 + 8), 2);
+                }
+                yield out;
+            }
+            case GZIP -> ExtraCodecs.gzipDecode(input);
+            case DEFLATE -> ExtraCodecs.deflateDecode(input);
+            default -> throw new IllegalArgumentException(method + " can't be decoded to raw bytes");
+        };
+    }
+
+    /** True for one-way hashes, which can be encoded (hashed) but never decoded. */
+    public static boolean isHash(String method) {
+        return method.endsWith("(Hash)");
+    }
+
+    /** True for methods that can only decode. */
+    public static boolean isDecodeOnly(String method) {
+        return JWT.equals(method);
+    }
 
     private TextCodec() {
     }
@@ -46,6 +129,24 @@ public class TextCodec {
             case JSON:
                 return jsonEscape(input);
 
+            case BASE32:
+                return ExtraCodecs.base32Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case BASE58:
+                return ExtraCodecs.base58Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case ASCII85:
+                return ExtraCodecs.ascii85Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case GZIP:
+                return ExtraCodecs.gzipEncode(input.getBytes(StandardCharsets.UTF_8));
+
+            case DEFLATE:
+                return ExtraCodecs.deflateEncode(input.getBytes(StandardCharsets.UTF_8));
+
+            case UNICODE:
+                return ExtraCodecs.unicodeEscape(input);
+
             case JWT:
                 throw new UnsupportedOperationException("JWT encoding not supported - use a proper JWT library for token creation");
 
@@ -57,6 +158,18 @@ public class TextCodec {
 
             case MD5:
                 return hashString(input, "MD5");
+
+            case SHA1:
+                return hashString(input, "SHA-1");
+
+            case SHA3_256:
+                return hashString(input, "SHA3-256");
+
+            case SHA3_512:
+                return hashString(input, "SHA3-512");
+
+            case BLAKE2B:
+                return bytesToHex(com.ourgiant.crypt.crypto.Blake2b.hash512(input.getBytes(StandardCharsets.UTF_8)));
 
             default:
                 throw new IllegalArgumentException("Unknown encoding method: " + method);
@@ -89,9 +202,31 @@ public class TextCodec {
             case JWT:
                 return decodeJWT(input);
 
+            case BASE32:
+                return ExtraCodecs.utf8(ExtraCodecs.base32Decode(input));
+
+            case BASE58:
+                return ExtraCodecs.utf8(ExtraCodecs.base58Decode(input));
+
+            case ASCII85:
+                return ExtraCodecs.utf8(ExtraCodecs.ascii85Decode(input));
+
+            case GZIP:
+                return ExtraCodecs.utf8(ExtraCodecs.gzipDecode(input));
+
+            case DEFLATE:
+                return ExtraCodecs.utf8(ExtraCodecs.deflateDecode(input));
+
+            case UNICODE:
+                return ExtraCodecs.unicodeUnescape(input);
+
             case SHA256:
             case SHA512:
             case MD5:
+            case SHA1:
+            case SHA3_256:
+            case SHA3_512:
+            case BLAKE2B:
                 throw new UnsupportedOperationException("Hash functions cannot be decoded (one-way only)");
 
             default:
