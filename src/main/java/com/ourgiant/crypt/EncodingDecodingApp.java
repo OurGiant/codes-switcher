@@ -379,7 +379,7 @@ public class EncodingDecodingApp extends JFrame {
             encodeButton.setToolTipText("Encode the input text");
         } else if (isJWT) {
             decodeButton.setToolTipText("Decode JWT token");
-            encodeButton.setToolTipText("JWT encoding not supported - use a JWT library");
+            encodeButton.setToolTipText("To create and sign a JWT, use the JWT Builder tab in the JWT / X.509 Inspector");
         } else {
             decodeButton.setToolTipText("Decode the input text");
             encodeButton.setToolTipText("Encode the input text");

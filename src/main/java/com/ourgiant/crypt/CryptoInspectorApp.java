@@ -49,6 +49,7 @@ public class CryptoInspectorApp extends JFrame {
     private JTextArea certResultArea;
     private JTextField tlsEndpointField;
     private JButton fetchTlsButton;
+    private JTabbedPane tabs;
 
     public CryptoInspectorApp() {
         setTitle("JWT / X.509 Inspector");
@@ -62,10 +63,28 @@ public class CryptoInspectorApp extends JFrame {
             setIconImage(icon);
         }
 
-        JTabbedPane tabs = new JTabbedPane();
+        tabs = new JTabbedPane();
         tabs.addTab("JWT Verifier", buildJwtTab());
+        tabs.addTab("JWT Builder", new JwtBuilderPanel(this::openInVerifier));
         tabs.addTab("X.509 Inspector", buildCertTab());
         add(tabs);
+    }
+
+    /** Hands a freshly built token to the Verifier tab, pre-filling the HMAC secret when there is one. */
+    private void openInVerifier(String token, String hmacSecret) {
+        jwtInput.setText(token);
+        if (hmacSecret != null) {
+            hmacOption.setSelected(true);
+            keyMaterialLayout.show(keyMaterialPanel, "hmac");
+            hmacSecretField.setText(hmacSecret);
+        } else {
+            publicKeyOption.setSelected(true);
+            keyMaterialLayout.show(keyMaterialPanel, "key");
+        }
+        tabs.setSelectedIndex(0);
+        if (hmacSecret != null) {
+            verifyButton.doClick();
+        }
     }
 
     // ============================== JWT tab ==============================
