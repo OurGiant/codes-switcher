@@ -1,6 +1,8 @@
 package com.ourgiant.crypt;
 
 import com.ourgiant.crypt.crypto.cert.ChainValidator;
+import com.ourgiant.crypt.crypto.cert.CsrParser;
+import com.ourgiant.crypt.crypto.cert.KeyStoreReader;
 import com.ourgiant.crypt.crypto.cert.TlsChainFetcher;
 import com.ourgiant.crypt.crypto.cert.X509Inspector;
 import com.ourgiant.crypt.crypto.jwt.JwksKeys;
@@ -67,6 +69,7 @@ public class CryptoInspectorApp extends JFrame {
         tabs.addTab("JWT Verifier", buildJwtTab());
         tabs.addTab("JWT Builder", new JwtBuilderPanel(this::openInVerifier));
         tabs.addTab("X.509 Inspector", buildCertTab());
+        tabs.addTab("Key Generator", new KeyGeneratorPanel(this::openInCertInspector));
         add(tabs);
     }
 
@@ -251,7 +254,8 @@ public class CryptoInspectorApp extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JPanel topPanel = new JPanel(new BorderLayout(4, 4));
-        topPanel.add(new JLabel("Certificate (PEM, or leaf+intermediate+root PEMs concatenated for chain validation):"),
+        topPanel.add(new JLabel("Certificate or CSR (PEM; or leaf+intermediate+root PEMs for chain validation). "
+                + "Open File also reads DER, PKCS#12 and JKS:"),
             BorderLayout.NORTH);
         certInput = new JTextArea(8, 60);
         certInput.setLineWrap(true);
@@ -331,21 +335,130 @@ public class CryptoInspectorApp extends JFrame {
         }.execute();
     }
 
+    /** Shows a generated certificate in the X.509 Inspector tab and inspects it. */
+    private void openInCertInspector(String pem) {
+        certInput.setText(pem);
+        tabs.setSelectedIndex(tabs.indexOfTab("X.509 Inspector"));
+        performCertInspection();
+    }
+
     private void openCertFile() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Open Certificate File");
-        fileChooser.setFileFilter(new FileNameExtensionFilter(
-            "Certificate files (*.pem, *.crt, *.cer)", "pem", "crt", "cer"));
+        fileChooser.setDialogTitle("Open Certificate, CSR or Keystore");
+        fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(
+            "Certificates (*.pem, *.crt, *.cer, *.der)", "pem", "crt", "cer", "der"));
+        fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(
+            "Keystores (*.p12, *.pfx, *.jks)", "p12", "pfx", "jks"));
+        fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(
+            "Signing requests (*.csr, *.req)", "csr", "req"));
+        fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
         int result = fileChooser.showOpenDialog(this);
         if (result != JFileChooser.APPROVE_OPTION) {
             return;
         }
         File file = fileChooser.getSelectedFile();
         try {
-            certInput.setText(Files.readString(file.toPath(), StandardCharsets.UTF_8));
+            openCertBytes(file.getName(), Files.readAllBytes(file.toPath()));
         } catch (IOException ex) {
             showMessage("Failed to read \"" + file.getName() + "\": " + ex.getMessage(), "Open File Failed");
         }
+    }
+
+    /** Loads PEM text, a DER certificate, or a PKCS#12/JKS keystore and shows its report. */
+    void openCertBytes(String name, byte[] data) {
+        String text = new String(data, StandardCharsets.UTF_8);
+        if (text.contains("-----BEGIN")) {
+            certInput.setText(text);
+            performCertInspection();
+            return;
+        }
+        String lower = name.toLowerCase();
+        boolean keystoreName = lower.endsWith(".p12") || lower.endsWith(".pfx") || lower.endsWith(".jks");
+        if (!keystoreName) {
+            try {
+                List<X509Certificate> certs = X509Inspector.parseDer(data);
+                certInput.setText(X509Inspector.toPemChain(certs));
+                certResultArea.setText("Opened DER file " + name + "\n\n" + formatCertReport(certs));
+                certResultArea.setCaretPosition(0);
+                return;
+            } catch (X509Inspector.CertParseException notACert) {
+                try {
+                    certInput.setText("");
+                    certResultArea.setText(formatCsrReport(CsrParser.parse(data)));
+                    certResultArea.setCaretPosition(0);
+                    return;
+                } catch (X509Inspector.CertParseException notACsr) {
+                    // fall through to keystore
+                }
+            }
+        }
+        if (KeyStoreReader.detectType(data) == null) {
+            certResultArea.setText("=== ERROR ===\n" + name + " isn't a PEM/DER certificate, CSR, PKCS#12 or JKS file.");
+            return;
+        }
+        openKeystore(name, data);
+    }
+
+    private void openKeystore(String name, byte[] data) {
+        String prompt = "Password for " + name + ":";
+        while (true) {
+            JPasswordField pw = new JPasswordField(20);
+            int ok = JOptionPane.showConfirmDialog(this, new Object[]{prompt, pw}, "Keystore Password",
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (ok != JOptionPane.OK_OPTION) {
+                return;
+            }
+            char[] password = pw.getPassword();
+            try {
+                showKeystore(name, KeyStoreReader.read(data, password));
+                return;
+            } catch (KeyStoreReader.WrongPasswordException e) {
+                prompt = "Wrong password. Try again for " + name + ":";
+            } catch (IOException e) {
+                certResultArea.setText("=== ERROR ===\n" + e.getMessage());
+                return;
+            } finally {
+                java.util.Arrays.fill(password, '\0');
+            }
+        }
+    }
+
+    void showKeystore(String name, List<KeyStoreReader.Entry> entries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== KEYSTORE ").append(name).append(" (").append(entries.size()).append(" entries) ===\n");
+        for (KeyStoreReader.Entry e : entries) {
+            sb.append("• ").append(e.alias()).append(" — ").append(switch (e.kind()) {
+                case PRIVATE_KEY -> "private key + " + e.chain().size() + " certificate(s)";
+                case TRUSTED_CERT -> "trusted certificate";
+                case SECRET_KEY -> "secret key (no certificate)";
+            }).append("\n");
+        }
+        StringBuilder pems = new StringBuilder();
+        for (KeyStoreReader.Entry e : entries) {
+            if (e.chain().isEmpty()) {
+                continue;
+            }
+            sb.append("\n######## ").append(e.alias()).append(" ########\n");
+            sb.append(formatCertReport(e.chain()));
+            pems.append(X509Inspector.toPemChain(e.chain()));
+        }
+        certInput.setText(pems.toString());
+        certInput.setCaretPosition(0);
+        certResultArea.setText(sb.toString());
+        certResultArea.setCaretPosition(0);
+    }
+
+    private String formatCsrReport(CsrParser.Csr csr) {
+        StringBuilder sb = new StringBuilder("=== CERTIFICATE SIGNING REQUEST ===\n");
+        sb.append("Subject: ").append(csr.subject()).append("\n");
+        sb.append("Public key: ").append(csr.keyDescription()).append("\n");
+        sb.append("Signature algorithm: ").append(csr.signatureAlgorithm()).append("\n");
+        sb.append("Requested SANs: ").append(csr.requestedSans().isEmpty() ? "(none)"
+                : String.join(", ", csr.requestedSans())).append("\n");
+        sb.append("Signature: ").append(csr.signatureValid() == null ? "not checked (algorithm unsupported)"
+                : csr.signatureValid() ? "VALID - signed by the key it contains"
+                : "INVALID - the request was altered or is corrupt").append("\n");
+        return sb.toString();
     }
 
     private void performCertInspection() {
@@ -355,6 +468,15 @@ public class CryptoInspectorApp extends JFrame {
             return;
         }
 
+        if (CsrParser.looksLikeCsr(input)) {
+            try {
+                certResultArea.setText(formatCsrReport(CsrParser.parsePem(input)));
+                certResultArea.setCaretPosition(0);
+            } catch (X509Inspector.CertParseException e) {
+                certResultArea.setText("=== ERROR ===\n" + e.getMessage());
+            }
+            return;
+        }
         try {
             List<X509Certificate> certs = X509Inspector.parseChain(input);
             certResultArea.setText(formatCertReport(certs));

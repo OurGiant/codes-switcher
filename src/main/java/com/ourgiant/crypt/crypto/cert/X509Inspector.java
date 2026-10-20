@@ -94,6 +94,26 @@ public final class X509Inspector {
         }
     }
 
+    /** Parses binary DER (or PKCS#7) certificate data, as found in .der/.cer files. */
+    public static List<X509Certificate> parseDer(byte[] der) {
+        if (der == null || der.length == 0) {
+            throw new CertParseException("No certificate data provided");
+        }
+        try {
+            CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            List<X509Certificate> certs = new ArrayList<>();
+            for (var cert : factory.generateCertificates(new ByteArrayInputStream(der))) {
+                certs.add((X509Certificate) cert);
+            }
+            if (certs.isEmpty()) {
+                throw new CertParseException("No certificates found in the file");
+            }
+            return certs;
+        } catch (CertificateException e) {
+            throw new CertParseException("Not a DER certificate: " + e.getMessage(), e);
+        }
+    }
+
     /** Renders one or more certificates back as concatenated PEM text, leaf-first order preserved. */
     public static String toPemChain(List<X509Certificate> certs) {
         StringBuilder sb = new StringBuilder();
