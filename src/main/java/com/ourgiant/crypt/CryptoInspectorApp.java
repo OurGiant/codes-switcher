@@ -53,6 +53,26 @@ public class CryptoInspectorApp extends JFrame {
     private JButton fetchTlsButton;
     private JTabbedPane tabs;
 
+    private ScreenHost host;
+
+    /** Hands this window's screens to the main window; dialogs and hand-offs then go through it. */
+    public List<ScreenHost.Screen> detachScreens(ScreenHost host) {
+        this.host = host;
+        return ScreenHost.drain(tabs);
+    }
+
+    private Component dialogOwner() {
+        return host != null ? host.dialogOwner() : this;
+    }
+
+    private void selectScreen(String title) {
+        if (host != null) {
+            host.showScreen(title);
+        } else {
+            tabs.setSelectedIndex(tabs.indexOfTab(title));
+        }
+    }
+
     public CryptoInspectorApp() {
         setTitle("JWT / X.509 Inspector");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -84,7 +104,7 @@ public class CryptoInspectorApp extends JFrame {
             publicKeyOption.setSelected(true);
             keyMaterialLayout.show(keyMaterialPanel, "key");
         }
-        tabs.setSelectedIndex(0);
+        selectScreen("JWT Verifier");
         if (hmacSecret != null) {
             verifyButton.doClick();
         }
@@ -108,7 +128,6 @@ public class CryptoInspectorApp extends JFrame {
         jwtResultArea = new JTextArea();
         jwtResultArea.setEditable(false);
         jwtResultArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        jwtResultArea.setBackground(new Color(245, 245, 245));
         panel.add(new JScrollPane(jwtResultArea), BorderLayout.CENTER);
 
         return panel;
@@ -268,7 +287,6 @@ public class CryptoInspectorApp extends JFrame {
         certResultArea = new JTextArea();
         certResultArea.setEditable(false);
         certResultArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        certResultArea.setBackground(new Color(245, 245, 245));
         panel.add(new JScrollPane(certResultArea), BorderLayout.CENTER);
 
         return panel;
@@ -338,7 +356,7 @@ public class CryptoInspectorApp extends JFrame {
     /** Shows a generated certificate in the X.509 Inspector tab and inspects it. */
     private void openInCertInspector(String pem) {
         certInput.setText(pem);
-        tabs.setSelectedIndex(tabs.indexOfTab("X.509 Inspector"));
+        selectScreen("X.509 Inspector");
         performCertInspection();
     }
 
@@ -352,7 +370,7 @@ public class CryptoInspectorApp extends JFrame {
         fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(
             "Signing requests (*.csr, *.req)", "csr", "req"));
         fileChooser.setFileFilter(fileChooser.getAcceptAllFileFilter());
-        int result = fileChooser.showOpenDialog(this);
+        int result = fileChooser.showOpenDialog(dialogOwner());
         if (result != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -403,7 +421,7 @@ public class CryptoInspectorApp extends JFrame {
         String prompt = "Password for " + name + ":";
         while (true) {
             JPasswordField pw = new JPasswordField(20);
-            int ok = JOptionPane.showConfirmDialog(this, new Object[]{prompt, pw}, "Keystore Password",
+            int ok = JOptionPane.showConfirmDialog(dialogOwner(), new Object[]{prompt, pw}, "Keystore Password",
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
             if (ok != JOptionPane.OK_OPTION) {
                 return;
@@ -539,6 +557,11 @@ public class CryptoInspectorApp extends JFrame {
     }
 
     private void showMessage(String message, String title) {
-        JOptionPane.showMessageDialog(this, message, title, JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(dialogOwner(), message, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Opens the main window on this tool's first screen (kept so existing shortcuts and scripts still work). */
+    public static void main(String[] args) {
+        AppLauncher.launch("JWT Verifier");
     }
 }

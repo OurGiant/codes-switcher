@@ -79,6 +79,19 @@ public class EncodingDecodingApp extends JFrame {
     static final String KEY_TEXT = "Text (UTF-8)";
     static final String KEY_HEX = "Hex";
 
+    private JTabbedPane tabs;
+    private ScreenHost host;
+
+    /** Hands this window's screens to the main window; dialogs then open over it. */
+    public java.util.List<ScreenHost.Screen> detachScreens(ScreenHost host) {
+        this.host = host;
+        return ScreenHost.drain(tabs);
+    }
+
+    private Component dialogOwner() {
+        return host != null ? host.dialogOwner() : this;
+    }
+
     public EncodingDecodingApp() {
         initializeComponents();
         setupLayout();
@@ -111,7 +124,6 @@ public class EncodingDecodingApp extends JFrame {
         outputTextArea.setWrapStyleWord(true);
         outputTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         outputTextArea.setEditable(false);
-        outputTextArea.setBackground(new Color(245, 245, 245));
         
         // Buttons
         encodeButton = new JButton("Encode");
@@ -161,7 +173,6 @@ public class EncodingDecodingApp extends JFrame {
         blowfishOutputArea.setWrapStyleWord(true);
         blowfishOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         blowfishOutputArea.setEditable(false);
-        blowfishOutputArea.setBackground(new Color(245, 245, 245));
 
         blowfishEncryptButton = new JButton("Encrypt");
         blowfishDecryptButton = new JButton("Decrypt");
@@ -233,7 +244,7 @@ public class EncodingDecodingApp extends JFrame {
         codecTab.add(centerPanel, BorderLayout.CENTER);
         codecTab.add(buttonPanel, BorderLayout.SOUTH);
 
-        JTabbedPane tabs = new JTabbedPane();
+        tabs = new JTabbedPane();
         tabs.addTab("Text Codecs", codecTab);
         tabs.addTab("Recipe", new RecipePanel());
         tabs.addTab("HMAC", new HmacPanel());
@@ -467,7 +478,7 @@ public class EncodingDecodingApp extends JFrame {
 
     private void openFile() {
         JFileChooser chooser = new JFileChooser();
-        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+        if (chooser.showOpenDialog(dialogOwner()) != JFileChooser.APPROVE_OPTION) {
             return;
         }
         loadFile(chooser.getSelectedFile().toPath());
@@ -502,11 +513,11 @@ public class EncodingDecodingApp extends JFrame {
             return;
         }
         JFileChooser chooser = new JFileChooser();
-        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+        if (chooser.showSaveDialog(dialogOwner()) != JFileChooser.APPROVE_OPTION) {
             return;
         }
         java.nio.file.Path target = chooser.getSelectedFile().toPath();
-        if (java.nio.file.Files.exists(target) && JOptionPane.showConfirmDialog(this,
+        if (java.nio.file.Files.exists(target) && JOptionPane.showConfirmDialog(dialogOwner(),
                 target.getFileName() + " already exists. Replace it?", "Confirm Save",
                 JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
             return;
@@ -643,19 +654,11 @@ public class EncodingDecodingApp extends JFrame {
     }
 
     private void showMessage(String message, String title) {
-        JOptionPane.showMessageDialog(this, message, title, JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(dialogOwner(), message, title, JOptionPane.INFORMATION_MESSAGE);
     }
     
+    /** Opens the main window on this tool's first screen (kept so existing shortcuts and scripts still work). */
     public static void main(String[] args) {
-        System.setProperty("awt.useSystemAAFontSettings", "on");
-        System.setProperty("swing.aatext", "true");
-        if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
-            log.warn("Theme setup failed; falling back to default look and feel");
-        }
-
-        // Create and show the application
-        SwingUtilities.invokeLater(() -> {
-            new EncodingDecodingApp().setVisible(true);
-        });
+        AppLauncher.launch("Text Codecs");
     }
 }

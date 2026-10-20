@@ -31,8 +31,10 @@ container, or it dies at `JFrame` construction with `HeadlessException`.
 java -jar target/decrypter-all.jar
 ```
 
-Main class (the tool picker): `com.ourgiant.crypt.AppLauncher`. The two
-tools are also directly runnable:
+Main class: `com.ourgiant.crypt.AppLauncher`, which opens `MainWindow`
+(sidebar of every screen). `--tool=NAME` starts on a screen (`gpg`, `jwt`,
+`x509`, `keygen`, `hash`, … — see `ScreenCatalog`). The old tool classes are
+still runnable and open the main window on their screen:
 
 ```bash
 java -cp target/decrypter-all.jar com.ourgiant.crypt.GPGDecryptor
@@ -63,7 +65,7 @@ time looking for a bug that isn't there.
 This host has a real X11 display (`DISPLAY=:1`, `xdpyinfo` succeeds), and
 `Robot.createScreenCapture(...)` was confirmed to return genuine,
 non-black pixel data — average sampled RGB ~202 across a live
-`AppLauncher` window, not just a visually-eyeballed PNG. Try it first here
+`AppLauncher` window (now `MainWindow`), not just a visually-eyeballed PNG. Try it first here
 rather than jumping to the reflection/log-based fallback other sibling
 projects needed on their Wayland/COSMIC sessions.
 
@@ -86,6 +88,17 @@ real backing operation, not just reflection state checks:
   `invokeAndWait(decryptButton::doClick)` is safe and does **not** hit the
   modal-dialog deadlock described in `verify-java-swing` §3), dismiss it,
   and diff the output file's content against the original plaintext.
+
+## Driving screens inside the main window
+
+Each tool class still builds its screens; `MainWindow` takes them over with
+`detachScreens(host)` the first time a screen in that group is opened. To drive
+one, construct `MainWindow` (the package-private `MainWindow(String, AppPreferences)`
+constructor takes a throwaway `Preferences` node so the real window state isn't
+touched), call `showScreen("<tab title>")`, then find components under
+`getContentPane()` as before. Pop-out windows are separate `JFrame`s. The theme
+switch plays a short fade (`FlatAnimatedLafChange`), so wait ~1 s after
+`ThemeManager.applyTheme` before taking a screenshot or it captures the fade.
 
 ## Nothing else confirmed yet
 

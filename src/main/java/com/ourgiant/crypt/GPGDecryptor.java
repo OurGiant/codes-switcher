@@ -24,6 +24,27 @@ public class GPGDecryptor extends JFrame {
     private JLabel statusLabel;
     private JLabel gpgVersionLabel;
     private JTabbedPane operationTabs;
+    private JComponent logPane;
+    private JComponent bottomPane;
+    private ScreenHost host;
+
+    /** Hands the five operation screens to the main window. Call {@link #detachFooter()} for the log/status. */
+    public java.util.List<ScreenHost.Screen> detachScreens(ScreenHost host) {
+        this.host = host;
+        return ScreenHost.drain(operationTabs);
+    }
+
+    /** The shared log, buttons and status line, for the main window to show under any GPG screen. */
+    public JComponent detachFooter() {
+        JPanel footer = new JPanel(new BorderLayout(6, 6));
+        footer.add(logPane, BorderLayout.CENTER);
+        footer.add(bottomPane, BorderLayout.SOUTH);
+        return footer;
+    }
+
+    private Component dialogOwner() {
+        return host != null ? host.dialogOwner() : this;
+    }
 
     private static final String GPG_TARBALL_URL = "https://gnupg.org/ftp/gcrypt/gnupg/gnupg-2.4.8.tar.bz2";
     private static final String REQUIRED_VERSION = "2.4.8";
@@ -174,6 +195,8 @@ public class GPGDecryptor extends JFrame {
         ctx.refreshKeys();
 
         // Add components to main panel
+        logPane = scrollPane;
+        bottomPane = bottomPanel;
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, operationTabs, scrollPane);
         split.setResizeWeight(0.65);
         split.setBorder(null);
@@ -193,7 +216,7 @@ public class GPGDecryptor extends JFrame {
             fileChooser.setCurrentDirectory(new File(currentPath).getParentFile());
         }
         
-        int result = fileChooser.showOpenDialog(this);
+        int result = fileChooser.showOpenDialog(dialogOwner());
         if (result == JFileChooser.APPROVE_OPTION) {
             textField.setText(fileChooser.getSelectedFile().getAbsolutePath());
         }
@@ -208,7 +231,7 @@ public class GPGDecryptor extends JFrame {
             fileChooser.setSelectedFile(new File(currentPath));
         }
         
-        int result = fileChooser.showSaveDialog(this);
+        int result = fileChooser.showSaveDialog(dialogOwner());
         if (result == JFileChooser.APPROVE_OPTION) {
             textField.setText(fileChooser.getSelectedFile().getAbsolutePath());
         }
@@ -289,7 +312,7 @@ public class GPGDecryptor extends JFrame {
         }
 
         int choice = JOptionPane.showOptionDialog(
-            this,
+            dialogOwner(),
             message,
             "Install GPG",
             JOptionPane.DEFAULT_OPTION,
@@ -308,7 +331,7 @@ public class GPGDecryptor extends JFrame {
         if (os.contains("win")) {
             if (choice == 0) {
                 openURL("https://www.gpg4win.org/download.html");
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(dialogOwner(),
                     "Opening Gpg4win download page.\n\n" +
                     "After installation:\n" +
                     "1. Run the Gpg4win installer\n" +
@@ -324,7 +347,7 @@ public class GPGDecryptor extends JFrame {
                 showHomebrewInstructions();
             } else if (choice == 1) {
                 openURL("https://gpgtools.org/");
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(dialogOwner(),
                     "Opening GPG Suite download page.\n\n" +
                     "After installation, restart this application.",
                     "Installation Instructions",
@@ -353,7 +376,7 @@ public class GPGDecryptor extends JFrame {
         JTextArea textArea = new JTextArea(instructions);
         textArea.setEditable(false);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        JOptionPane.showMessageDialog(this, new JScrollPane(textArea), 
+        JOptionPane.showMessageDialog(dialogOwner(), new JScrollPane(textArea), 
             "Homebrew Installation", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -373,7 +396,7 @@ public class GPGDecryptor extends JFrame {
         JTextArea textArea = new JTextArea(instructions);
         textArea.setEditable(false);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        JOptionPane.showMessageDialog(this, new JScrollPane(textArea), 
+        JOptionPane.showMessageDialog(dialogOwner(), new JScrollPane(textArea), 
             "Package Manager Installation", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -390,13 +413,13 @@ public class GPGDecryptor extends JFrame {
         JTextArea textArea = new JTextArea(instructions);
         textArea.setEditable(false);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
-        JOptionPane.showMessageDialog(this, new JScrollPane(textArea), 
+        JOptionPane.showMessageDialog(dialogOwner(), new JScrollPane(textArea), 
             "Manual Installation", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void compileFromSource() {
         int confirm = JOptionPane.showConfirmDialog(
-            this,
+            dialogOwner(),
             "Compiling from source requires:\n" +
             "- Build tools (gcc, make)\n" +
             "- Dependencies (libgpg-error, libgcrypt, etc.)\n" +
@@ -480,7 +503,7 @@ public class GPGDecryptor extends JFrame {
 
         // Validation
         if (encryptedFile.isEmpty() || outputFile.isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
+            JOptionPane.showMessageDialog(dialogOwner(), 
                 "Please specify encrypted file and output file locations.", 
                 "Missing Information", 
                 JOptionPane.WARNING_MESSAGE);
@@ -488,7 +511,7 @@ public class GPGDecryptor extends JFrame {
         }
 
         if (!Files.exists(Paths.get(encryptedFile))) {
-            JOptionPane.showMessageDialog(this, 
+            JOptionPane.showMessageDialog(dialogOwner(), 
                 "Encrypted file does not exist.", 
                 "File Not Found", 
                 JOptionPane.ERROR_MESSAGE);
@@ -496,7 +519,7 @@ public class GPGDecryptor extends JFrame {
         }
 
         if (!keyFile.isEmpty() && !Files.exists(Paths.get(keyFile))) {
-            JOptionPane.showMessageDialog(this, 
+            JOptionPane.showMessageDialog(dialogOwner(), 
                 "Key file does not exist.", 
                 "File Not Found", 
                 JOptionPane.ERROR_MESSAGE);
@@ -526,7 +549,7 @@ public class GPGDecryptor extends JFrame {
                     boolean success = get();
                     statusLabel.setText(success ? "Decryption completed successfully" : "Decryption failed");
                     if (success) {
-                        JOptionPane.showMessageDialog(GPGDecryptor.this, 
+                        JOptionPane.showMessageDialog(dialogOwner(), 
                             "File decrypted successfully!\n\nOutput: " + outputFile, 
                             "Success", 
                             JOptionPane.INFORMATION_MESSAGE);
@@ -546,14 +569,8 @@ public class GPGDecryptor extends JFrame {
         logArea.setCaretPosition(logArea.getDocument().getLength());
     }
 
+    /** Opens the main window on this tool's first screen (kept so existing shortcuts and scripts still work). */
     public static void main(String[] args) {
-        System.setProperty("awt.useSystemAAFontSettings", "on");
-        System.setProperty("swing.aatext", "true");
-        SwingUtilities.invokeLater(() -> {
-            if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
-                log.warn("Theme setup failed; falling back to default look and feel");
-            }
-            new GPGDecryptor().setVisible(true);
-        });
+        AppLauncher.launch("Decrypt");
     }
 }
