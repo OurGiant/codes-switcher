@@ -279,6 +279,17 @@ public class CryptoInspectorApp extends JFrame {
         certInput = new JTextArea(8, 60);
         certInput.setLineWrap(true);
         certInput.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        certInput.putClientProperty("JTextField.placeholderText",
+                "Paste a PEM certificate or CSR, or drop a .pem/.der/.p12/.jks/.csr file");
+        // Dropped files go through Open File, which reads DER, keystores and CSRs as well as PEM.
+        certInput.putClientProperty(TextEnhancements.FILE_DROP_HANDLER,
+                (java.util.function.Consumer<java.nio.file.Path>) path -> {
+                    try {
+                        openCertBytes(path.getFileName().toString(), Files.readAllBytes(path));
+                    } catch (IOException e) {
+                        showMessage("Failed to read \"" + path.getFileName() + "\": " + e.getMessage(), "Open File Failed");
+                    }
+                });
         topPanel.add(new JScrollPane(certInput), BorderLayout.CENTER);
         topPanel.add(buildCertActionsPanel(), BorderLayout.SOUTH);
 

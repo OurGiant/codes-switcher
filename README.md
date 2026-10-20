@@ -68,6 +68,8 @@ Certificates and GPG. It reopens on the screen, size and position you last used.
 - **Find a tool:** Ctrl+K (⌘K on macOS), type, press Enter.
 - **Jump to a group:** Ctrl/⌘+1 … 5.
 - **Use two tools side by side:** "Open in New Window" on any screen; close that window to bring it back.
+- **Drop files** onto any input: text boxes load the file (Text Codecs reads binary files as raw bytes; the X.509 input also takes DER, PKCS#12, JKS and CSR files), file-path fields fill in the path.
+- **Right-click any text box** for Cut / Copy / Paste and **Copy As** plain text, JSON/JavaScript, Java or Python string, or a Markdown code block.
 
 To start on a particular screen, pass `--tool`:
 
