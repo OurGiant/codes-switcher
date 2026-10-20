@@ -1,58 +1,20 @@
 package com.ourgiant.crypt;
 
-import com.ourgiant.crypt.util.UpdateChecker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Optional;
 
-public class AppLauncher extends JFrame {
+/**
+ * Application entry point and shared window helpers. Opens the {@link MainWindow}; pass
+ * {@code --tool=NAME} (e.g. {@code gpg}, {@code jwt}, {@code x509}, {@code keygen}, {@code hash})
+ * to start on a particular screen instead of the last one used.
+ */
+public final class AppLauncher {
     private static final Logger log = LoggerFactory.getLogger(AppLauncher.class);
 
-    private final AppPreferences preferences = new AppPreferences();
-
-    public AppLauncher() {
-        setTitle("Codes Switcher v" + AppVersion.get());
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(640, 480);
-        setLocationRelativeTo(null);
-        setLayout(new GridLayout(0, 1, 10, 10));
-        Image icon = loadAppIcon();
-        if (icon != null) {
-            setIconImage(icon);
-        }
-
-        JLabel label = new JLabel("Choose a tool", SwingConstants.CENTER);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 16f));
-
-        JButton gpgButton = new JButton("GPG Tools");
-        gpgButton.addActionListener(e -> {
-            new GPGDecryptor().setVisible(true);
-            dispose();
-        });
-
-        JButton encodingButton = new JButton("Encoder / Decoder");
-        encodingButton.addActionListener(e -> {
-            new EncodingDecodingApp().setVisible(true);
-            dispose();
-        });
-
-        JButton cryptoInspectorButton = new JButton("JWT / X.509 Inspector");
-        cryptoInspectorButton.addActionListener(e -> {
-            new CryptoInspectorApp().setVisible(true);
-            dispose();
-        });
-
-        ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-        add(label);
-        add(gpgButton);
-        add(encodingButton);
-        add(cryptoInspectorButton);
-
-        setJMenuBar(createMenuBar(this));
-        checkForUpdateAndNotifyIfNewer();
+    private AppLauncher() {
     }
 
     /** Shared by every window so the running app matches the packaged installer's icon, not just the jpackage-set one. */
@@ -61,16 +23,20 @@ public class AppLauncher extends JFrame {
         return url != null ? new ImageIcon(url).getImage() : null;
     }
 
+    /**
+     * Menu bar for a tool class used as its own window (the main window has its own). "Open Main
+     * Window" closes this window and opens the main window on the same kind of screen.
+     */
     public static JMenuBar createMenuBar(JFrame frame) {
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
 
-        JMenuItem switchAppsItem = new JMenuItem("Switch Apps");
-        switchAppsItem.addActionListener(e -> {
+        JMenuItem mainWindowItem = new JMenuItem("Open Main Window");
+        mainWindowItem.addActionListener(e -> {
             frame.dispose();
-            new AppLauncher().setVisible(true);
+            MainWindow.open(null);
         });
-        fileMenu.add(switchAppsItem);
+        fileMenu.add(mainWindowItem);
 
         fileMenu.addSeparator();
 
@@ -90,7 +56,7 @@ public class AppLauncher extends JFrame {
         return menuBar;
     }
 
-    private static JMenu createThemeMenu() {
+    static JMenu createThemeMenu() {
         JMenu themeMenu = new JMenu("Theme");
         AppPreferences preferences = new AppPreferences();
         String currentTheme = preferences.getTheme();
@@ -111,54 +77,26 @@ public class AppLauncher extends JFrame {
         return themeMenu;
     }
 
-    /**
-     * Silent unless there's actually something to say: no UI at all if up to date or the check
-     * fails, and only once per newly-released version (not once per launch) if there's an
-     * update — otherwise a known update sitting unapplied would pop this on every single
-     * startup. A user can still always check manually via Help > About regardless of this
-     * state. This is the app's only outbound network call, and it never blocks launch since it
-     * runs in its own SwingWorker.
-     */
-    private void checkForUpdateAndNotifyIfNewer() {
-        SwingWorker<Optional<UpdateChecker.ReleaseInfo>, Void> worker = new SwingWorker<>() {
-            @Override
-            protected Optional<UpdateChecker.ReleaseInfo> doInBackground() {
-                return UpdateChecker.fetchLatestRelease();
+    /** Applies the saved theme and opens the main window on {@code screen} (null: last used). */
+    static void launch(String screen) {
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
+        SwingUtilities.invokeLater(() -> {
+            if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
+                log.warn("Theme setup failed; falling back to default look and feel");
             }
-
-            @Override
-            protected void done() {
-                Optional<UpdateChecker.ReleaseInfo> release;
-                try {
-                    release = get();
-                } catch (Exception e) {
-                    log.warn("Silent startup update check failed", e);
-                    return;
-                }
-                if (release.isEmpty()) {
-                    return;
-                }
-                UpdateChecker.ReleaseInfo info = release.get();
-                if (!UpdateChecker.isNewerVersion(info.version(), AppVersion.get())) {
-                    return;
-                }
-                if (info.version().equals(preferences.getLastNotifiedUpdateVersion())) {
-                    return;
-                }
-                preferences.setLastNotifiedUpdateVersion(info.version());
-                new AboutDialog(AppLauncher.this, info).setVisible(true);
-            }
-        };
-        worker.execute();
+            MainWindow.open(screen);
+        });
     }
 
     public static void main(String[] args) {
-        System.setProperty("awt.useSystemAAFontSettings", "on");
-        System.setProperty("swing.aatext", "true");
-        if (!ThemeManager.applyTheme(new AppPreferences().getTheme())) {
-            log.warn("Theme setup failed; falling back to default look and feel");
-        }
-
-        SwingUtilities.invokeLater(() -> new AppLauncher().setVisible(true));
+        String screen = ScreenCatalog.toolArgument(args).map(tool -> {
+            var entry = ScreenCatalog.resolve(tool);
+            if (entry.isEmpty()) {
+                log.warn("Unknown --tool value \"{}\"; opening the last-used screen", tool);
+            }
+            return entry.map(ScreenCatalog.Entry::title).orElse(null);
+        }).orElse(null);
+        launch(screen);
     }
 }

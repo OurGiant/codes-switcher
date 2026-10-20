@@ -62,14 +62,27 @@ Produces `target/decrypter-all.jar`.
 java -jar target/decrypter-all.jar
 ```
 
-A launcher window opens letting you choose between the GPG Decryptor and the Encoder/Decoder. To skip the launcher and open a tool directly:
+One window opens with every tool in a sidebar, grouped as Encode / Decode, Ciphers, JWT,
+Certificates and GPG. It reopens on the screen, size and position you last used.
+
+- **Find a tool:** Ctrl+K (⌘K on macOS), type, press Enter.
+- **Jump to a group:** Ctrl/⌘+1 … 5.
+- **Use two tools side by side:** "Open in New Window" on any screen; close that window to bring it back.
+
+To start on a particular screen, pass `--tool`:
+
+```bash
+java -jar target/decrypter-all.jar --tool=gpg      # also: jwt, jwt-builder, x509, keygen, hash, recipe, hmac, aes, blowfish …
+```
+
+The old per-tool classes still work as entry points and open the main window on their screen:
 
 ```bash
 java -cp target/decrypter-all.jar com.ourgiant.crypt.GPGDecryptor
 java -cp target/decrypter-all.jar com.ourgiant.crypt.EncodingDecodingApp
 ```
 
-Every window's Help > About shows the running version and checks GitHub
+Help > About shows the running version and checks GitHub
 Releases for a newer one (manually, or silently and non-blockingly on
 startup, at most once per newly-released version).
 
@@ -87,9 +100,11 @@ scripts for its desktop-entry integration.
 
 ```
 src/main/java/com/ourgiant/crypt/
-├── AppLauncher.java           # Tool picker / entry point
+├── AppLauncher.java           # Entry point (--tool=…), shared menu/icon helpers
+├── MainWindow.java            # Single window: grouped sidebar + screens, pop-out windows
+├── ScreenCatalog.java         # Sidebar groups, search and --tool names (no Swing)
 ├── AppVersion.java            # Reads the app's own version at runtime
-├── AppPreferences.java        # Local app state (last-notified update version, theme)
+├── AppPreferences.java        # Local app state (update notice, theme, window layout)
 ├── AboutDialog.java           # Help > About: version + update check
 ├── ThemeManager.java          # FlatLaf theme selection/persistence
 ├── GPGDecryptor.java          # GPG file decryption UI (thin, delegates to gpg/)
