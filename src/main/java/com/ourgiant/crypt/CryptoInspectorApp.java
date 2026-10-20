@@ -224,7 +224,9 @@ public class CryptoInspectorApp extends JFrame {
             protected void done() {
                 verifyButton.setEnabled(true);
                 try {
-                    jwtResultArea.setText(formatOutcome(get()));
+                    String report = formatOutcome(get());
+                    jwtResultArea.setText(report);
+                    recordJwtVerification(jwt, report);
                 } catch (Exception e) {
                     log.error("JWT verification failed unexpectedly", e);
                     jwtResultArea.setText("Unexpected error: " + e.getMessage());
@@ -232,6 +234,36 @@ public class CryptoInspectorApp extends JFrame {
                 jwtResultArea.setCaretPosition(0);
             }
         }.execute();
+    }
+
+    /**
+     * History keeps the token, the kind of key used, and public material (a public key or JWKS
+     * URL) so "Open in Tool" can re-check it. The HMAC secret is never recorded.
+     */
+    private void recordJwtVerification(String jwt, String report) {
+        boolean hmac = hmacOption.isSelected();
+        boolean pem = publicKeyOption.isSelected();
+        String publicKey = publicKeyArea.getText();
+        String jwksUrl = jwksUrlField.getText();
+        String mode = hmac ? "HMAC secret" : pem ? "public key" : "JWKS";
+        String verdict = report.lines().filter(l -> l.startsWith("VALID") || l.startsWith("INVALID")
+                || l.startsWith("NOT VERIFIED")).findFirst().orElse("");
+        SessionHistory.global().record("JWT Verifier", "Verify with " + mode + (verdict.isEmpty() ? "" : " · " + verdict.split(" ")[0]),
+                jwt, report, () -> {
+                    jwtInput.setText(jwt);
+                    (hmac ? hmacOption : pem ? publicKeyOption : jwksOption).setSelected(true);
+                    keyMaterialLayout.show(keyMaterialPanel, hmac ? "hmac" : pem ? "key" : "jwks");
+                    publicKeyArea.setText(publicKey);
+                    jwksUrlField.setText(jwksUrl);
+                    jwtResultArea.setText("");
+                });
+    }
+
+    private void recordCertInspection(String input, String report, String operation) {
+        SessionHistory.global().record("X.509 Inspector", operation, input, report, () -> {
+            certInput.setText(input);
+            certResultArea.setText("");
+        });
     }
 
     private static JwtVerification.Outcome errorOutcome(String message) {
@@ -499,8 +531,10 @@ public class CryptoInspectorApp extends JFrame {
 
         if (CsrParser.looksLikeCsr(input)) {
             try {
-                certResultArea.setText(formatCsrReport(CsrParser.parsePem(input)));
+                String report = formatCsrReport(CsrParser.parsePem(input));
+                certResultArea.setText(report);
                 certResultArea.setCaretPosition(0);
+                recordCertInspection(input, report, "Inspect CSR");
             } catch (X509Inspector.CertParseException e) {
                 certResultArea.setText("=== ERROR ===\n" + e.getMessage());
             }
@@ -508,8 +542,10 @@ public class CryptoInspectorApp extends JFrame {
         }
         try {
             List<X509Certificate> certs = X509Inspector.parseChain(input);
-            certResultArea.setText(formatCertReport(certs));
+            String report = formatCertReport(certs);
+            certResultArea.setText(report);
             certResultArea.setCaretPosition(0);
+            recordCertInspection(input, report, certs.size() > 1 ? "Inspect chain (" + certs.size() + ")" : "Inspect certificate");
         } catch (X509Inspector.CertParseException e) {
             certResultArea.setText("=== ERROR ===\n" + e.getMessage());
         }

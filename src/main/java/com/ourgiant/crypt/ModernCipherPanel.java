@@ -111,8 +111,16 @@ public class ModernCipherPanel extends JPanel {
             protected void done() {
                 setBusy(false, " ");
                 try {
-                    outputArea.setText(get());
+                    String result = get();
+                    outputArea.setText(result);
                     outputArea.setCaretPosition(0);
+                    // The password is never recorded; restoring brings back the text and algorithm.
+                    SessionHistory.global().record("AES / ChaCha20",
+                            (encrypt ? "Encrypt · " + algorithm.displayName() : "Decrypt"), input, result, () -> {
+                                algorithmBox.setSelectedItem(algorithm);
+                                inputArea.setText(input);
+                                outputArea.setText("");
+                            });
                     if (!encrypt) {
                         status.setText("Decrypted with " + PasswordCipher.algorithmOf(input).displayName()
                                 + " — integrity verified.");

@@ -95,6 +95,19 @@ public class HmacPanel extends JPanel {
             base64Out.setText(r.base64());
             base64UrlOut.setText(r.base64Url());
             updateMatch();
+            // The key is never recorded.
+            String message = messageArea.getText();
+            Algorithm alg = (Algorithm) algorithmBox.getSelectedItem();
+            KeyFormat keyFormat = (KeyFormat) keyFormatBox.getSelectedItem();
+            SessionHistory.global().record("HMAC", alg.toString(), message,
+                    "hex: " + r.hex() + "\nbase64: " + r.base64(), () -> {
+                        algorithmBox.setSelectedItem(alg);
+                        keyFormatBox.setSelectedItem(keyFormat);
+                        messageArea.setText(message);
+                        hexOut.setText("");
+                        base64Out.setText("");
+                        base64UrlOut.setText("");
+                    });
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "HMAC failed: " + ex.getMessage(), "Error",
                     JOptionPane.INFORMATION_MESSAGE);

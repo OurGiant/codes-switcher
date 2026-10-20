@@ -169,6 +169,7 @@ public class MainWindow extends JFrame implements ScreenHost {
                 gpgFooter = collapsibleGpgFooter(gpg.detachFooter());
                 yield s;
             }
+            case HISTORY -> List.of(new Screen("History", new HistoryPanel(SessionHistory.global(), this)));
         };
         for (Screen s : screens) {
             JPanel holder = holders.get(s.title());
@@ -463,6 +464,14 @@ public class MainWindow extends JFrame implements ScreenHost {
         popOut.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, mod | KeyEvent.SHIFT_DOWN_MASK));
         popOut.addActionListener(e -> togglePopOut(current));
         file.add(popOut);
+        JMenuItem clearHistory = new JMenuItem("Clear History");
+        clearHistory.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this, "Clear the session history?", "Clear History",
+                    JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                SessionHistory.global().clear();
+            }
+        });
+        file.add(clearHistory);
         file.addSeparator();
         JMenuItem exit = new JMenuItem("Exit");
         exit.addActionListener(e -> exit());
