@@ -112,4 +112,16 @@ class TextCodecTest {
     void decodeJwtRejectsMalformedToken() {
         assertThrows(IllegalArgumentException.class, () -> TextCodec.decode("not.a.jwt.token", TextCodec.JWT));
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "SHA-1 (Hash), a9993e364706816aba3e25717850c26c9cd0d89d",
+            "SHA3-256 (Hash), 3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+            "SHA3-512 (Hash), b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0",
+            "BLAKE2b-512 (Hash), ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
+    })
+    void newHashesOfAbc(String method, String expected) throws Exception {
+        assertEquals(expected, TextCodec.encode("abc", method));
+        assertThrows(UnsupportedOperationException.class, () -> TextCodec.decode(expected, method));
+    }
 }

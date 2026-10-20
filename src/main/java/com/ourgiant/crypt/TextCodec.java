@@ -17,6 +17,10 @@ public class TextCodec {
     public static final String SHA256 = "SHA-256 (Hash)";
     public static final String SHA512 = "SHA-512 (Hash)";
     public static final String MD5 = "MD5 (Hash)";
+    public static final String SHA1 = "SHA-1 (Hash)";
+    public static final String SHA3_256 = "SHA3-256 (Hash)";
+    public static final String SHA3_512 = "SHA3-512 (Hash)";
+    public static final String BLAKE2B = "BLAKE2b-512 (Hash)";
     public static final String JSON = "JSON Escape";
     public static final String JWT = "JWT (Decode Only)";
     public static final String BASE32 = "Base32";
@@ -82,6 +86,18 @@ public class TextCodec {
             case MD5:
                 return hashString(input, "MD5");
 
+            case SHA1:
+                return hashString(input, "SHA-1");
+
+            case SHA3_256:
+                return hashString(input, "SHA3-256");
+
+            case SHA3_512:
+                return hashString(input, "SHA3-512");
+
+            case BLAKE2B:
+                return bytesToHex(com.ourgiant.crypt.crypto.Blake2b.hash512(input.getBytes(StandardCharsets.UTF_8)));
+
             default:
                 throw new IllegalArgumentException("Unknown encoding method: " + method);
         }
@@ -134,6 +150,10 @@ public class TextCodec {
             case SHA256:
             case SHA512:
             case MD5:
+            case SHA1:
+            case SHA3_256:
+            case SHA3_512:
+            case BLAKE2B:
                 throw new UnsupportedOperationException("Hash functions cannot be decoded (one-way only)");
 
             default:

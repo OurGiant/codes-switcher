@@ -21,7 +21,9 @@ Encode and decode text using a wide range of formats from a single interface.
 - Unicode escapes (`\uXXXX`; decode also accepts `\u{1F510}`)
 - Gzip and raw Deflate (compressed bytes shown as Base64; decompression capped at 64 MB)
 - JWT (decode only)
-- SHA-256 / SHA-512 / MD5 hashing
+- SHA-256 / SHA-512 / SHA3-256 / SHA3-512 / BLAKE2b-512 hashing, plus SHA-1 and MD5 for legacy checks
+
+**HMAC tab:** HMAC-SHA256/384/512 (and legacy SHA-1) of a message with a text, hex or Base64 key. Shows hex, Base64 and Base64URL, and compares against a pasted expected value.
 
 **Cipher tabs:**
 - **AES / ChaCha20** — password-based AES-256-GCM or ChaCha20-Poly1305. The key comes from PBKDF2-HMAC-SHA256 (600,000 iterations, random salt) and each encryption uses a random nonce. Output is one Base64 string holding everything needed to decrypt except the password; a wrong password or any change to the data is detected and reported.
