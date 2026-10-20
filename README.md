@@ -1,52 +1,59 @@
-# GPG Decryptor & Universal Encoder/Decoder
+# Codes Switcher
 
-A Java Swing desktop application combining two cryptography utilities: a GPG file decryptor and a universal text encoder/decoder.
+A Java Swing desktop toolkit for everyday encoding, hashing, encryption, JWT, certificate and GPG work. Everything runs locally in one window, with every tool in a grouped sidebar.
 
 ## Tools
 
-### GPG File Decryptor
-Decrypt GPG-encrypted files through a graphical interface. Automatically detects the installed GPG version, validates it meets the minimum requirement (2.4.8), and can download and install GPG if it is not present.
+### Encode / Decode
+- **Text Codecs** — encode and decode:
+  - Base64, Base32 (RFC 4648), Base58 (Bitcoin alphabet), ASCII85, hexadecimal, binary
+  - URL encoding, HTML entities, JSON escape, Unicode escapes (`\uXXXX`; decode also accepts `\u{1F510}`), ROT13
+  - Gzip and raw Deflate (compressed bytes shown as Base64; decompression capped at 64 MB)
+  - JWT (decode only)
+  - Hashes: SHA-256 / SHA-512 / SHA3-256 / SHA3-512 / BLAKE2b-512, plus SHA-1 and MD5 for legacy checks
+  - **Detect Format** guesses what pasted data is and selects it, and flags things it can't decode (PEM blocks, hash-length hex, this app's cipher output).
+  - **Open File… / Save Output…** work on raw bytes, so binary files encode and decode exactly.
+- **Recipe** — chain steps (e.g. Base64 → URL → gzip decode) and see each step's output. Recipes can be copied and loaded as plain text.
+- **HMAC** — HMAC-SHA256/384/512 (and legacy SHA-1) with a text, hex or Base64 key. Shows hex, Base64 and Base64URL, and compares against an expected value.
+- **File Hash** — hash files of any size (streamed, with progress) and check against a published hash. Accepts `sha256sum` and `SHA256 (file) = …` lines.
 
-### Universal Encoder/Decoder
-Encode and decode text using a wide range of formats from a single interface.
+### Ciphers
+- **AES / ChaCha20** — password-based AES-256-GCM or ChaCha20-Poly1305. The key comes from PBKDF2-HMAC-SHA256 (600,000 iterations, random salt) and each encryption uses a random nonce. Output is one Base64 string holding everything needed to decrypt except the password. A wrong password or any change to the data is detected.
+- **Blowfish** — legacy mode (ECB, hex, optional CRC framing) for existing data, and standard **CBC** mode (IV, PKCS#5/zero/no padding, hex or Base64) compatible with OpenSSL `bf-cbc`. Not recommended for protecting new secrets.
 
-**Supported formats:**
-- Base64, Base32 (RFC 4648), Base58 (Bitcoin alphabet), ASCII85
-- URL encoding
-- HTML entities
-- Hexadecimal
-- Binary
-- ROT13
-- JSON escape
-- Unicode escapes (`\uXXXX`; decode also accepts `\u{1F510}`)
-- Gzip and raw Deflate (compressed bytes shown as Base64; decompression capped at 64 MB)
-- JWT (decode only)
-- SHA-256 / SHA-512 / SHA3-256 / SHA3-512 / BLAKE2b-512 hashing, plus SHA-1 and MD5 for legacy checks
+### JWT
+- **Verifier** — HMAC (HS256/384/512) against a shared secret, or RSA/EC (RS/ES 256/384/512) against a PEM public key or a JWKS URL.
+  - Rejects `alg: none`, and refuses a token whose algorithm doesn't match the kind of key provided (algorithm-confusion defence, RFC 8725 §3.1/3.2).
+  - Checks `exp`/`nbf` against the current time.
+- **Builder** — create and sign tokens from header/payload JSON, with HS*, RS* or ES* keys (PEM, PKCS#8 or PKCS#1). The header's `alg` always matches the signature, and `none` is never produced. "Open in Verifier" checks the result.
 
-**HMAC tab:** HMAC-SHA256/384/512 (and legacy SHA-1) of a message with a text, hex or Base64 key. Shows hex, Base64 and Base64URL, and compares against a pasted expected value.
+### Certificates
+- **X.509 Inspector** — opens:
+  - PEM and DER certificates and chains;
+  - PKCS#12 / JKS keystores (password prompt);
+  - PKCS#10 CSRs;
+  - the chain a TLS host presents.
 
-**Cipher tabs:**
-- **AES / ChaCha20** — password-based AES-256-GCM or ChaCha20-Poly1305. The key comes from PBKDF2-HMAC-SHA256 (600,000 iterations, random salt) and each encryption uses a random nonce. Output is one Base64 string holding everything needed to decrypt except the password; a wrong password or any change to the data is detected and reported.
-- **Blowfish** — legacy Blowfish (ECB, hex output, optional CRC framing) for working with existing data. Not suitable for protecting new secrets.
+  It shows subject, issuer, validity, SANs, key usage and SHA-256 fingerprint, and flags expired, self-signed and weak-key certificates. It also validates chains and checks that a CSR is signed by the key it contains.
+- **Key Generator** — RSA 2048/3072/4096, EC P-256/P-384 and Ed25519 key pairs as PEM, plus an optional self-signed X.509 v3 certificate (SANs, validity, CA option). Export as PEM or PKCS#12.
 
-### JWT / X.509 Inspector
-A third tool for signature verification and certificate inspection — extends beyond the Encoder/Decoder's JWT decode-only support.
+### GPG
+Uses the system `gpg`. The app detects its version and can install GPG 2.4.8+ if it's missing.
+- **Decrypt** files.
+- **Encrypt** to keyring recipients or public key files, optionally signing.
+- **Sign** — detached, clearsigned or inline.
+- **Verify** — good / bad / expired or revoked key / unknown signer, with fingerprint and trust.
+- **Keys** — list the keyring and import key files.
 
-**JWT Verifier:**
-- HMAC (HS256/384/512) verification against a shared secret, RSA/EC (RS256/384/512, ES256/384/512) against a pasted PEM public key or a JWKS URL
-- Explicitly rejects `alg: none`, and refuses to verify a token whose algorithm doesn't match the family of key material you provided (e.g. an HS256 token against an RSA public key) — this is a structural defense against algorithm-confusion attacks (RFC 8725 §3.1/3.2), not just a warning
-- `exp`/`nbf` checked against the current time — valid / expired / not-yet-valid / no time claims, not just raw decode
+Passphrases are passed over stdin, never on the command line. Untrusted recipient keys need an explicit "Trust recipient keys" tick.
 
-**X.509 Certificate Inspector:**
-- Parses a pasted PEM certificate (or a concatenated chain: leaf, intermediate(s), root)
-- Shows subject, issuer, validity window, SANs, key usage, and SHA-256 fingerprint
-- Flags expired, self-signed (with an independent self-signature check, not just subject==issuer), and weak-key (RSA < 2048 bits, EC < 224-bit curve) certificates
-- Basic chain validation when more than one certificate is supplied — verifies each certificate's signature against the next one's public key
+### Session
+- **History** — what you've run this session, with "Open in Tool" to put an entry's input back. Kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
 
 ## Prerequisites
 
 - Java 24 or higher
-- GPG 2.4.8+ (GPG Decryptor only — the app can install it if missing)
+- GPG 2.4.8+ for the GPG tools (the app can install it if missing)
 
 ## Build
 
@@ -110,20 +117,26 @@ src/main/java/com/ourgiant/crypt/
 ├── AppPreferences.java        # Local app state (update notice, theme, window layout)
 ├── AboutDialog.java           # Help > About: version + update check
 ├── ThemeManager.java          # FlatLaf theme selection/persistence
-├── GPGDecryptor.java          # GPG file decryption UI (thin, delegates to gpg/)
+├── ScreenHost.java            # How tool classes hand their screens to the main window
+├── TextEnhancements.java      # File drop, right-click menu, hints on every text box
+├── CopyFormat.java            # "Copy As" escaping (no Swing)
+├── SessionHistory.java        # In-memory history (no Swing); HistoryPanel.java is its screen
+├── GPGDecryptor.java          # GPG screens + shared log (GpgPanels.java: Encrypt/Sign/Verify/Keys)
 ├── GpgVersion.java            # GPG version comparison logic
-├── TextCodec.java             # Encoding/decoding/hashing logic
-├── EncodingDecodingApp.java   # Universal encoder/decoder UI
-├── CryptoInspectorApp.java    # JWT Verifier + X.509 Inspector UI (two tabs)
+├── TextCodec.java             # Encoding/decoding/hashing logic (+ ExtraCodecs, FormatDetector, Recipe)
+├── EncodingDecodingApp.java   # Text Codecs + Blowfish screens; other Encode/Cipher tabs are *Panel.java
+├── CryptoInspectorApp.java    # JWT Verifier + X.509 Inspector (JwtBuilderPanel, KeyGeneratorPanel)
 ├── gpg/
-│   ├── GpgOperations.java        # GPG install/decrypt domain logic (no Swing)
+│   ├── GpgOperations.java        # GPG install/decrypt/encrypt/sign/verify/keys (no Swing)
+│   ├── GpgKey.java, GpgVerifyResult.java  # Parsers for gpg's machine-readable output
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
 ├── crypto/
-│   ├── jwt/                      # JwtParser, HmacVerifier, RsaEcVerifier, PemPublicKeys,
-│   │                              # JwksKeys/JwksFetcher, JwtVerification (orchestrator) -
-│   │                              # no Swing
-│   └── cert/                     # X509Inspector, ChainValidator - no Swing
+│   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher
+│   ├── asn1/                     # Small DER reader/writer (CSR parsing, certificate building)
+│   ├── jwt/                      # JwtParser, verifiers, JwtSigner, PEM key parsing, JWKS - no Swing
+│   └── cert/                     # X509Inspector, ChainValidator, CsrParser, KeyStoreReader,
+│                                 # CertificateGenerator, TlsChainFetcher - no Swing
 └── util/
     ├── UpdateChecker.java        # GitHub releases API check (no Swing)
     ├── HttpClientFactory.java    # HttpClient w/ Windows trust-store support
@@ -135,7 +148,7 @@ src/main/java/com/ourgiant/crypt/
 - [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (+ `flatlaf-intellij-themes`, `flatlaf-extras`) — UI theming
 - [SLF4J](https://www.slf4j.org/) 2.0.16 + [Logback](https://logback.qos.ch/) 1.6.1 — logging
 - [Jackson Databind](https://github.com/FasterXML/jackson-databind) 2.18.9 — parses the GitHub releases API response, JWT header/payload JSON, and JWKS documents
-- No new dependency for JWT/X.509 crypto itself — `java.security`/`javax.crypto`/`java.security.cert` (JDK-only) cover HMAC/RSA/EC signature verification, JWK reconstruction, and certificate parsing
+- No crypto library dependency — the JDK covers HMAC/RSA/EC/Ed25519, AES-GCM, ChaCha20-Poly1305, SHA-3, PBKDF2, certificates and keystores. BLAKE2b and the DER reader/writer used for CSRs and certificate building are small in-repo implementations, tested against RFC vectors, OpenSSL and keytool
 - [JUnit Jupiter](https://junit.org/junit5/) 5.10.2 — test scope only
 - [Mockito](https://site.mockito.org/) 5.23.0 — test scope only
 
