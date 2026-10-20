@@ -30,6 +30,21 @@ public class TextCodec {
     public static final String DEFLATE = "Deflate, raw (as Base64)";
     public static final String UNICODE = "Unicode Escape";
 
+    /** Every method, in the order the UI lists them. */
+    public static final java.util.List<String> METHODS = java.util.List.of(
+            BASE64, BASE32, BASE58, ASCII85, URL, HTML, HEX, BINARY, ROT13,
+            JSON, UNICODE, GZIP, DEFLATE, JWT, SHA256, SHA512, SHA3_256, SHA3_512, BLAKE2B, SHA1, MD5);
+
+    /** True for one-way hashes, which can be encoded (hashed) but never decoded. */
+    public static boolean isHash(String method) {
+        return method.endsWith("(Hash)");
+    }
+
+    /** True for methods that can only decode. */
+    public static boolean isDecodeOnly(String method) {
+        return JWT.equals(method);
+    }
+
     private TextCodec() {
     }
 
