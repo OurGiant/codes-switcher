@@ -1,5 +1,6 @@
 package com.ourgiant.crypt;
 
+import com.ourgiant.crypt.crypto.BlowfishCbc;
 import com.ourgiant.crypt.crypto.BlowfishCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,18 @@ public class EncodingDecodingApp extends JFrame {
     private JButton blowfishDecryptButton;
     private JButton blowfishClearButton;
     private JButton blowfishCopyButton;
+    private JComboBox<String> blowfishModeBox;
+    private JComboBox<String> blowfishKeyFormatBox;
+    private JTextField blowfishIvField;
+    private JButton blowfishRandomIvButton;
+    private JComboBox<BlowfishCbc.Padding> blowfishPaddingBox;
+    private JComboBox<BlowfishCbc.Encoding> blowfishEncodingBox;
+    private JPanel blowfishCbcOptions;
+
+    static final String BLOWFISH_LEGACY = "Legacy (ECB, hex, CRC)";
+    static final String BLOWFISH_CBC = "CBC (standard)";
+    static final String KEY_TEXT = "Text (UTF-8)";
+    static final String KEY_HEX = "Hex";
 
     public EncodingDecodingApp() {
         initializeComponents();
@@ -126,6 +139,17 @@ public class EncodingDecodingApp extends JFrame {
         blowfishCrcCheckBox = new JCheckBox("CRC framing", true);
         blowfishCrcCheckBox.setToolTipText(
                 "Append and verify an integrity checksum. Must match the setting used when the text was encrypted.");
+
+        blowfishModeBox = new JComboBox<>(new String[]{BLOWFISH_LEGACY, BLOWFISH_CBC});
+        blowfishModeBox.setToolTipText("Legacy matches this app's earlier Blowfish output. "
+                + "CBC is the standard mode used by OpenSSL (bf-cbc), PHP mcrypt and others.");
+        blowfishKeyFormatBox = new JComboBox<>(new String[]{KEY_TEXT, KEY_HEX});
+        blowfishIvField = new JTextField(16);
+        blowfishIvField.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        blowfishIvField.setToolTipText("8-byte IV as 16 hex digits. Left empty on encrypt, a random IV is generated.");
+        blowfishRandomIvButton = new JButton("Random IV");
+        blowfishPaddingBox = new JComboBox<>(BlowfishCbc.Padding.values());
+        blowfishEncodingBox = new JComboBox<>(BlowfishCbc.Encoding.values());
 
         blowfishInputArea = new JTextArea(10, 40);
         blowfishInputArea.setLineWrap(true);
@@ -221,18 +245,34 @@ public class EncodingDecodingApp extends JFrame {
     }
 
     private JPanel buildBlowfishTab() {
-        // Key + CRC controls
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        controls.add(new JLabel("Key:"));
-        controls.add(blowfishKeyField);
-        controls.add(blowfishCrcCheckBox);
+        // Mode, key and CRC on the first row; CBC-only options on the second
+        JPanel firstRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        firstRow.add(new JLabel("Mode:"));
+        firstRow.add(blowfishModeBox);
+        firstRow.add(new JLabel("Key:"));
+        firstRow.add(blowfishKeyField);
+        firstRow.add(blowfishKeyFormatBox);
+        firstRow.add(blowfishCrcCheckBox);
+
+        blowfishCbcOptions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        blowfishCbcOptions.add(new JLabel("IV (hex):"));
+        blowfishCbcOptions.add(blowfishIvField);
+        blowfishCbcOptions.add(blowfishRandomIvButton);
+        blowfishCbcOptions.add(new JLabel("Padding:"));
+        blowfishCbcOptions.add(blowfishPaddingBox);
+        blowfishCbcOptions.add(new JLabel("Ciphertext as:"));
+        blowfishCbcOptions.add(blowfishEncodingBox);
+
+        JPanel controls = new JPanel(new GridLayout(2, 1));
+        controls.add(firstRow);
+        controls.add(blowfishCbcOptions);
         controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
 
         JPanel center = new JPanel(new GridLayout(2, 1, 10, 10));
         center.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
         JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.setBorder(new TitledBorder("Input (plaintext to encrypt, or hex to decrypt)"));
+        inputPanel.setBorder(new TitledBorder("Input (plaintext to encrypt, or ciphertext to decrypt)"));
         inputPanel.add(new JScrollPane(blowfishInputArea), BorderLayout.CENTER);
 
         JPanel outputPanel = new JPanel(new BorderLayout());
@@ -276,6 +316,10 @@ public class EncodingDecodingApp extends JFrame {
         blowfishDecryptButton.addActionListener(e -> performBlowfish(false));
         blowfishClearButton.addActionListener(e -> clearBlowfish());
         blowfishCopyButton.addActionListener(e -> copyBlowfishOutput());
+        blowfishRandomIvButton.addActionListener(e -> blowfishIvField.setText(
+                BlowfishCbc.Encoding.HEX.format(BlowfishCbc.randomIv())));
+        blowfishModeBox.addActionListener(e -> updateBlowfishMode());
+        updateBlowfishMode();
         
         // Update decode button based on selected method
         methodComboBox.addActionListener(e -> updateDecodeButton());
@@ -515,10 +559,24 @@ public class EncodingDecodingApp extends JFrame {
         setOutput(input, newOutputBytes);
     }
     
+    private void updateBlowfishMode() {
+        boolean cbc = BLOWFISH_CBC.equals(blowfishModeBox.getSelectedItem());
+        for (Component c : blowfishCbcOptions.getComponents()) {
+            c.setEnabled(cbc);
+        }
+        blowfishKeyFormatBox.setEnabled(cbc);
+        blowfishCrcCheckBox.setEnabled(!cbc);
+    }
+
     private void performBlowfish(boolean encrypt) {
         String input = blowfishInputArea.getText();
         if (input.isEmpty()) {
             showMessage("Please enter text to " + (encrypt ? "encrypt." : "decrypt."), "Input Required");
+            return;
+        }
+
+        if (BLOWFISH_CBC.equals(blowfishModeBox.getSelectedItem())) {
+            performBlowfishCbc(encrypt, input);
             return;
         }
 
@@ -534,6 +592,32 @@ public class EncodingDecodingApp extends JFrame {
                         "Decryption Failed");
             }
 
+            blowfishOutputArea.setText(result);
+            blowfishOutputArea.setCaretPosition(0);
+        } catch (Exception e) {
+            showMessage((encrypt ? "Encryption" : "Decryption") + " failed: " + e.getMessage(), "Error");
+        }
+    }
+
+    private void performBlowfishCbc(boolean encrypt, String input) {
+        try {
+            String keyText = blowfishKeyField.getText();
+            byte[] key = KEY_HEX.equals(blowfishKeyFormatBox.getSelectedItem())
+                    ? BlowfishCbc.Encoding.HEX.parse(keyText)
+                    : keyText.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            if (encrypt && blowfishIvField.getText().isBlank()) {
+                blowfishIvField.setText(BlowfishCbc.Encoding.HEX.format(BlowfishCbc.randomIv()));
+            }
+            if (blowfishIvField.getText().isBlank()) {
+                showMessage("Decrypting in CBC mode needs the IV that was used to encrypt.", "IV Required");
+                return;
+            }
+            byte[] iv = BlowfishCbc.parseIv(blowfishIvField.getText());
+            BlowfishCbc.Padding padding = (BlowfishCbc.Padding) blowfishPaddingBox.getSelectedItem();
+            BlowfishCbc.Encoding encoding = (BlowfishCbc.Encoding) blowfishEncodingBox.getSelectedItem();
+            String result = encrypt
+                    ? BlowfishCbc.encrypt(input, key, iv, padding, encoding)
+                    : BlowfishCbc.decrypt(input, key, iv, padding, encoding);
             blowfishOutputArea.setText(result);
             blowfishOutputArea.setCaretPosition(0);
         } catch (Exception e) {
