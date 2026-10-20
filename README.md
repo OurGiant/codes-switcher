@@ -54,6 +54,12 @@ Passphrases are passed over stdin, never on the command line. Untrusted recipien
 
 Keep the PNG exactly as saved: converting it to JPEG, editing it, or sending it through apps that compress images erases the message. The encryption protects what you hid, but the method can be detected by specialised analysis, so it hides content, not the fact that something is hidden.
 
+<details>
+<summary>Easter egg (spoiler)</summary>
+
+Type `mnemonic` in the tool search and press Enter to switch on **Courier Mode**, a nod to *Johnny Mnemonic* (1995). Hide Message and Reveal Message can then use **three images** as the key instead of a password, in any order. The key is built from the images' pixels: lossless re-saves such as PNG to BMP keep it, while edits or JPEG recompression change it. Anyone with the same three files can reveal the message, so keep them as private as a password. The app goes neon while the mode is on, and typing the word again switches it off. It isn't saved between sessions, so switch it on again to reveal a message hidden this way.
+</details>
+
 ### Session
 - **History** — what you've run this session, with "Open in Tool" to put an entry's input back. Kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
 
@@ -138,10 +144,10 @@ src/main/java/com/ourgiant/crypt/
 │   ├── GpgKey.java, GpgVerifyResult.java  # Parsers for gpg's machine-readable output
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
-├── StegoPanels.java           # Hide / Reveal / Analyze screens
+├── StegoPanels.java           # Hide / Reveal / Analyze screens (CourierMode.java: the easter egg)
 ├── crypto/
 │   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher
-│   ├── stego/                    # Steganography (hide/reveal), StegoAnalysis - no Swing
+│   ├── stego/                    # Steganography (hide/reveal), StegoAnalysis, CourierKey - no Swing
 │   ├── asn1/                     # Small DER reader/writer (CSR parsing, certificate building)
 │   ├── jwt/                      # JwtParser, verifiers, JwtSigner, PEM key parsing, JWKS - no Swing
 │   └── cert/                     # X509Inspector, ChainValidator, CsrParser, KeyStoreReader,

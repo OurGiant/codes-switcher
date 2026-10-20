@@ -1,5 +1,6 @@
 package com.ourgiant.crypt;
 
+import com.ourgiant.crypt.crypto.stego.CourierKey;
 import com.ourgiant.crypt.crypto.stego.Steganography;
 import com.ourgiant.crypt.crypto.stego.Steganography.Payload;
 import com.ourgiant.crypt.crypto.stego.StegoAnalysis;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,6 +34,7 @@ final class StegoPanels {
     private static final Color OK = new Color(46, 125, 50);
     private static final Color WARN = new Color(230, 126, 34);
     private static final Color BAD = new Color(198, 40, 40);
+    private static final Color NEON = new Color(0x39ff14);
 
     private StegoPanels() {
     }
@@ -53,13 +56,14 @@ final class StegoPanels {
         final JRadioButton fileOption = new JRadioButton("File");
         final JTextArea messageArea = new JTextArea(5, 40);
         final JTextField fileField = new JTextField();
-        final JPasswordField password = new JPasswordField();
-        final JPasswordField repeat = new JPasswordField();
+        final KeyChooser key = new KeyChooser(true);
         final JProgressBar usage = new JProgressBar(0, 1000);
         final JButton hideButton = new JButton("Hide and Save as PNG…");
         final JLabel status = new JLabel(" ");
         private final Steganography stego;
         private BufferedImage cover;
+        private boolean overloaded;
+        private Timer flicker;
 
         HidePanel(Steganography stego) {
             super(new BorderLayout(10, 10));
@@ -90,13 +94,11 @@ final class StegoPanels {
             m.fileRow("File:", fileField, false, this::updateUsage);
             m.row("Uses:", usage);
 
-            Form p = new Form("3. Password");
-            p.row("Password:", password);
-            p.row("Repeat:", repeat);
+            key.setTitle("3. ");
 
             JPanel left = new JPanel();
             left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-            for (JComponent c : new JComponent[]{f, m, p}) {
+            for (JComponent c : new JComponent[]{f, m, key}) {
                 c.setAlignmentX(LEFT_ALIGNMENT);
                 left.add(c);
             }
@@ -128,6 +130,7 @@ final class StegoPanels {
             fileOption.addActionListener(e -> updateKind());
             messageArea.getDocument().addDocumentListener(onChange(this::updateUsage));
             hideButton.addActionListener(e -> hideMessage());
+            CourierMode.addListener(() -> SwingUtilities.invokeLater(this::updateUsage));
             updateKind();
         }
 
@@ -176,9 +179,36 @@ final class StegoPanels {
             }
             long cap = Steganography.capacityBytes(cover.getWidth(), cover.getHeight(), fileNameForCapacity());
             long size = payloadSize();
+            boolean over = size > cap;
             usage.setValue(cap == 0 ? 1000 : (int) Math.min(1000, size * 1000 / cap));
-            usage.setString(formatSize(size) + " of " + formatSize(cap) + (size > cap ? " — too big for this image" : ""));
-            usage.setForeground(size > cap ? BAD : null);
+            usage.setForeground(over ? BAD : null);
+            if (over && CourierMode.isOn()) {
+                usage.setString("⚠ DATA OVERLOAD: " + formatSize(size) + " won't fit in " + formatSize(cap)
+                        + (size <= 2 * cap ? ". Not even with a memory doubler." : "."));
+                if (!overloaded) {
+                    flickerMeter();
+                }
+            } else {
+                usage.setString(formatSize(size) + " of " + formatSize(cap) + (over ? " — too big for this image" : ""));
+            }
+            overloaded = over;
+        }
+
+        /** Courier Mode's overload gag: the meter flashes for a moment when the payload stops fitting. */
+        private void flickerMeter() {
+            if (flicker != null) {
+                flicker.stop();
+            }
+            int[] ticks = {0};
+            flicker = new Timer(90, e -> {
+                ticks[0]++;
+                usage.setForeground(ticks[0] % 2 == 0 ? BAD : NEON);
+                if (ticks[0] >= 12) {
+                    ((Timer) e.getSource()).stop();
+                    usage.setForeground(overloaded ? BAD : null);
+                }
+            });
+            flicker.start();
         }
 
         private void hideMessage() {
@@ -186,17 +216,12 @@ final class StegoPanels {
                 message(this, "Choose a cover image first.");
                 return;
             }
-            char[] pw = password.getPassword();
-            char[] pw2 = repeat.getPassword();
+            KeyChooser.Key k = key.prepare(this);
+            if (k == null) {
+                return;
+            }
+            boolean handedOff = false;
             try {
-                if (pw.length == 0) {
-                    message(this, "Enter a password. You'll need it to reveal the message.");
-                    return;
-                }
-                if (!Arrays.equals(pw, pw2)) {
-                    message(this, "The passwords don't match.");
-                    return;
-                }
                 Payload payload;
                 if (textOption.isSelected()) {
                     if (messageArea.getText().isEmpty()) {
@@ -216,22 +241,25 @@ final class StegoPanels {
                 if (target == null) {
                     return;
                 }
-                char[] pwCopy = pw.clone();
                 Path coverPath = Path.of(coverField.getText().strip());
                 BufferedImage coverImage = cover;
+                handedOff = true;
                 run(this, hideButton, status, "Encrypting and hiding…", () -> {
+                    char[] secret = k.resolve();
                     try {
-                        BufferedImage out = stego.hide(coverImage, payload, pwCopy);
+                        BufferedImage out = stego.hide(coverImage, payload, secret);
                         if (!ImageIO.write(out, "png", target.toFile())) {
                             throw new IOException("PNG writer unavailable");
                         }
                         return out;
                     } finally {
-                        Arrays.fill(pwCopy, '\0');
+                        Arrays.fill(secret, '\0');
+                        k.clear();
                     }
                 }, out -> {
                     status.setForeground(OK);
-                    status.setText("✔ Hidden " + formatSize(payload.data().length) + " in " + target.getFileName());
+                    status.setText("✔ Hidden " + formatSize(payload.data().length) + " in " + target.getFileName()
+                            + (k.images() ? " (three-image key)" : ""));
                     SessionHistory.global().record(HIDE,
                             payload.isText() ? "Hide text (" + formatSize(payload.data().length) + ")" : "Hide file " + payload.fileName(),
                             coverPath.toString(), "Saved " + target, () -> {
@@ -242,8 +270,9 @@ final class StegoPanels {
             } catch (IOException e) {
                 message(this, "Couldn't read the file: " + e.getMessage());
             } finally {
-                Arrays.fill(pw, '\0');
-                Arrays.fill(pw2, '\0');
+                if (!handedOff) {
+                    k.clear();
+                }
             }
         }
 
@@ -266,6 +295,153 @@ final class StegoPanels {
         }
     }
 
+    // ------------------------------------------------------------------ Key (password, or three images in Courier Mode)
+
+    /** The key section of Hide and Reveal: a password, or, in Courier Mode, a choice of three images. */
+    static final class KeyChooser extends JPanel {
+        final JRadioButton passwordOption = new JRadioButton("Password", true);
+        final JRadioButton imagesOption = new JRadioButton("Three images");
+        final JPasswordField password = new JPasswordField();
+        final JPasswordField repeat = new JPasswordField();
+        final JTextField[] frames = {new JTextField(), new JTextField(), new JTextField()};
+        private final JPanel choice = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        private final JPanel cards = new JPanel();
+        private final Form passwordForm = new Form(null);
+        private final Form imagesForm = new Form(null);
+        private final TitledBorder border = new TitledBorder("");
+        private final boolean confirm;
+        private String prefix = "";
+
+        KeyChooser(boolean confirm) {
+            super(new BorderLayout(0, 4));
+            this.confirm = confirm;
+            setBorder(border);
+
+            ButtonGroup g = new ButtonGroup();
+            g.add(passwordOption);
+            g.add(imagesOption);
+            choice.add(new JLabel("Key:  "));
+            choice.add(passwordOption);
+            choice.add(Box.createHorizontalStrut(12));
+            choice.add(imagesOption);
+            choice.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+
+            passwordForm.row("Password:", password);
+            if (confirm) {
+                passwordForm.row("Repeat:", repeat);
+            }
+            Form img = imagesForm;
+            for (int i = 0; i < frames.length; i++) {
+                img.fileRow("Image " + (i + 1) + ":", frames[i], false, () -> { });
+            }
+            JLabel note = new JLabel("<html>Anyone with these same three files can " + (confirm ? "reveal the message" : "rebuild the key")
+                    + ". Keep them private and unchanged; a re-saved JPEG is a different image. Any order works.</html>");
+            note.setForeground(UIManager.getColor("Label.disabledForeground"));
+            img.row("", note);
+            cards.setLayout(new BoxLayout(cards, BoxLayout.Y_AXIS));
+            cards.add(passwordForm);
+            cards.add(imagesForm);
+
+            add(choice, BorderLayout.NORTH);
+            add(cards, BorderLayout.CENTER);
+            passwordOption.addActionListener(e -> refresh());
+            imagesOption.addActionListener(e -> refresh());
+            CourierMode.addListener(() -> SwingUtilities.invokeLater(this::refresh));
+            refresh();
+        }
+
+        void setTitle(String prefix) {
+            this.prefix = prefix;
+            refresh();
+        }
+
+        boolean usingImages() {
+            return CourierMode.isOn() && imagesOption.isSelected();
+        }
+
+        void refresh() {
+            boolean courier = CourierMode.isOn();
+            choice.setVisible(courier);
+            if (!courier) {
+                passwordOption.setSelected(true);
+            }
+            border.setTitle(prefix + (courier ? "Key · Courier Mode" : "Password"));
+            passwordForm.setVisible(!usingImages());
+            imagesForm.setVisible(usingImages());
+            revalidate();
+            repaint();
+        }
+
+        /** A key resolved off the UI thread: either the typed password, or the images read and hashed. */
+        interface Key {
+            char[] resolve() throws Exception;
+
+            void clear();
+
+            boolean images();
+        }
+
+        /** Checks the inputs and returns the key, or shows what's missing and returns null. */
+        Key prepare(Component parent) {
+            if (usingImages()) {
+                List<Path> paths = new ArrayList<>();
+                for (JTextField f : frames) {
+                    if (f.getText().isBlank()) {
+                        message(parent, "Choose all three key images.");
+                        return null;
+                    }
+                    paths.add(Path.of(f.getText().strip()));
+                }
+                return new Key() {
+                    public char[] resolve() throws Exception {
+                        List<BufferedImage> imgs = new ArrayList<>();
+                        for (Path p : paths) {
+                            imgs.add(readImage(p));
+                        }
+                        return CourierKey.derive(imgs);
+                    }
+
+                    public void clear() {
+                    }
+
+                    public boolean images() {
+                        return true;
+                    }
+                };
+            }
+            char[] pw = password.getPassword();
+            char[] pw2 = repeat.getPassword();
+            try {
+                if (pw.length == 0) {
+                    message(parent, confirm ? "Enter a password. You'll need it to reveal the message."
+                            : "Enter the password the message was hidden with.");
+                    Arrays.fill(pw, '\0');
+                    return null;
+                }
+                if (confirm && !Arrays.equals(pw, pw2)) {
+                    message(parent, "The passwords don't match.");
+                    Arrays.fill(pw, '\0');
+                    return null;
+                }
+            } finally {
+                Arrays.fill(pw2, '\0');
+            }
+            return new Key() {
+                public char[] resolve() {
+                    return pw.clone();
+                }
+
+                public void clear() {
+                    Arrays.fill(pw, '\0');
+                }
+
+                public boolean images() {
+                    return false;
+                }
+            };
+        }
+    }
+
     /** Forces a lossless .png name: "photo.jpg" becomes "photo.png", "photo" becomes "photo.png". */
     static Path pngPath(Path chosen) {
         String name = chosen.getFileName().toString();
@@ -280,7 +456,7 @@ final class StegoPanels {
 
     static final class RevealPanel extends JPanel {
         final JTextField imageField = new JTextField();
-        final JPasswordField password = new JPasswordField();
+        final KeyChooser key = new KeyChooser(false);
         final JButton revealButton = new JButton("Reveal");
         final JLabel status = new JLabel(" ");
         final JTextArea resultArea = new JTextArea(8, 40);
@@ -294,13 +470,19 @@ final class StegoPanels {
             this.stego = stego;
             setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-            Form f = new Form("Image and password");
+            Form f = new Form("Image");
             f.fileRow("Image:", imageField, false, this::loadPreview);
-            f.row("Password:", password);
             JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
             actions.add(revealButton);
-            f.row("", actions);
-            f.row("", status);
+            Form go = new Form(null);
+            go.row("", actions);
+            go.row("", status);
+            JPanel form = new JPanel();
+            form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+            for (JComponent c : new JComponent[]{f, key, go}) {
+                c.setAlignmentX(LEFT_ALIGNMENT);
+                form.add(c);
+            }
 
             resultArea.setEditable(false);
             resultArea.setLineWrap(true);
@@ -319,13 +501,13 @@ final class StegoPanels {
             previewBox.setPreferredSize(new Dimension(300, 200));
 
             JPanel top = new JPanel(new BorderLayout(10, 10));
-            top.add(f, BorderLayout.CENTER);
+            top.add(form, BorderLayout.CENTER);
             top.add(previewBox, BorderLayout.EAST);
             add(top, BorderLayout.NORTH);
             add(result, BorderLayout.CENTER);
 
             revealButton.addActionListener(e -> reveal());
-            password.addActionListener(e -> reveal());
+            key.password.addActionListener(e -> reveal());
             saveFileButton.addActionListener(e -> saveFile());
         }
 
@@ -341,10 +523,12 @@ final class StegoPanels {
 
         void reveal() {
             String path = imageField.getText().strip();
-            char[] pw = password.getPassword();
-            if (path.isEmpty() || pw.length == 0) {
-                message(this, "Choose an image and enter the password it was hidden with.");
-                Arrays.fill(pw, '\0');
+            if (path.isEmpty()) {
+                message(this, "Choose the image the message is hidden in.");
+                return;
+            }
+            KeyChooser.Key k = key.prepare(this);
+            if (k == null) {
                 return;
             }
             revealed = null;
@@ -353,10 +537,15 @@ final class StegoPanels {
             new SwingWorker<Payload, Void>() {
                 @Override
                 protected Payload doInBackground() throws Exception {
+                    char[] secret = null;
                     try {
-                        return stego.reveal(readImage(Path.of(path)), pw);
+                        secret = k.resolve();
+                        return stego.reveal(readImage(Path.of(path)), secret);
                     } finally {
-                        Arrays.fill(pw, '\0');
+                        if (secret != null) {
+                            Arrays.fill(secret, '\0');
+                        }
+                        k.clear();
                     }
                 }
 
@@ -385,8 +574,10 @@ final class StegoPanels {
                                 });
                     } catch (ExecutionException e) {
                         Throwable c = e.getCause();
-                        status.setForeground(c instanceof Steganography.NotFoundException ? WARN : BAD);
-                        status.setText((c instanceof Steganography.NotFoundException ? "? " : "✘ ") + c.getMessage());
+                        boolean notFound = c instanceof Steganography.NotFoundException;
+                        status.setForeground(notFound ? WARN : BAD);
+                        status.setText(notFound && k.images() ? "? No hidden message found in this image for those three key images"
+                                : (notFound ? "? " : "✘ ") + c.getMessage());
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
@@ -617,7 +808,9 @@ final class StegoPanels {
 
         Form(String title) {
             super(new GridBagLayout());
-            setBorder(new TitledBorder(title));
+            if (title != null) {
+                setBorder(new TitledBorder(title));
+            }
         }
 
         void row(String label, JComponent field) {

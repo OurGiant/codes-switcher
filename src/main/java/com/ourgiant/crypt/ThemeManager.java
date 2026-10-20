@@ -41,13 +41,37 @@ public class ThemeManager {
         return AVAILABLE_THEMES.keySet().toArray(new String[0]);
     }
 
+    /** Courier Mode's neon-on-black look: Flat Dark with its colour variables overridden. Not in the Theme menu. */
+    static final Map<String, String> COURIER_COLORS = Map.of(
+            "@background", "#0a110c",
+            "@foreground", "#b6ffb0",
+            "@accentColor", "#39ff14",
+            "@componentBackground", "#0f1a12",
+            "@buttonBackground", "#13241a",
+            "@selectionBackground", "#1f6b2a",
+            "@selectionForeground", "#eaffe6");
+
+    public static boolean applyCourierTheme() {
+        FlatDarkLaf laf = new FlatDarkLaf();
+        laf.setExtraDefaults(COURIER_COLORS);
+        return apply(laf, "Courier");
+    }
+
     public static boolean applyTheme(String themeName) {
         String className = AVAILABLE_THEMES.get(themeName);
         if (className == null) {
             logger.warn("Theme not found: {}", themeName);
             return false;
         }
+        try {
+            return apply((LookAndFeel) Class.forName(className).getDeclaredConstructor().newInstance(), themeName);
+        } catch (ReflectiveOperationException e) {
+            logger.error("Failed to create theme: {}", themeName, e);
+            return false;
+        }
+    }
 
+    private static boolean apply(LookAndFeel laf, String themeName) {
         FlatAnimatedLafChange.showSnapshot();
 
         try {
@@ -56,9 +80,6 @@ public class ThemeManager {
                 flushStaleNimbusDefaults();
             }
 
-            LookAndFeel laf = (LookAndFeel) Class.forName(className)
-                .getDeclaredConstructor()
-                .newInstance();
             UIManager.setLookAndFeel(laf);
 
             refreshDisplayableWindows();
