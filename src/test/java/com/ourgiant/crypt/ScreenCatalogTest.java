@@ -38,9 +38,20 @@ class ScreenCatalogTest {
     @CsvSource({
             "gpg, Decrypt", "GPG-Encrypt, Encrypt", "jwt, JWT Verifier", "jwt-builder, JWT Builder",
             "x509, X.509 Inspector", "X.509 Inspector, X.509 Inspector", "keygen, Key Generator",
-            "hash, File Hash", "aes, AES / ChaCha20", "text codecs, Text Codecs", "Recipe, Recipe"})
+            "hash, File Hash", "aes, AES / ChaCha20", "text codecs, Text Codecs", "Recipe, Recipe",
+            "enigma, Enigma", "imitation, Enigma", "ottendorf, Book Cipher", "book, Book Cipher", "atbash, Substitution",
+            "caesar, Substitution", "rot, Substitution", "vigenere, Substitution", "crack, Vigenère Cracker",
+            "vigenere-crack, Vigenère Cracker"})
     void resolvesToolArgument(String tool, String title) {
         assertEquals(Optional.of(title), ScreenCatalog.resolve(tool).map(ScreenCatalog.Entry::title));
+    }
+
+    @Test
+    void classicCiphersComeRightAfterCiphers() {
+        assertEquals(ScreenCatalog.GROUPS.indexOf("Ciphers") + 1, ScreenCatalog.GROUPS.indexOf("Classic Ciphers"));
+        assertEquals(List.of("Enigma", "Book Cipher", "Substitution", "Vigenère Cracker"),
+                ScreenCatalog.inGroup("Classic Ciphers").stream().map(ScreenCatalog.Entry::title).toList());
+        assertEquals(8, ScreenCatalog.GROUPS.indexOf("Session") + 1);
     }
 
     @Test

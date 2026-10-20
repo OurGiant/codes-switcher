@@ -21,6 +21,13 @@ A Java Swing desktop toolkit for everyday encoding, hashing, encryption, JWT, ce
 - **AES / ChaCha20** — password-based AES-256-GCM or ChaCha20-Poly1305. The key comes from PBKDF2-HMAC-SHA256 (600,000 iterations, random salt) and each encryption uses a random nonce. Output is one Base64 string holding everything needed to decrypt except the password. A wrong password or any change to the data is detected.
 - **Blowfish** — legacy mode (ECB, hex, optional CRC framing) for existing data, and standard **CBC** mode (IV, PKCS#5/zero/no padding, hex or Base64) compatible with OpenSSL `bf-cbc`. Not recommended for protecting new secrets.
 
+### Classic Ciphers
+For puzzles, CTFs and learning, not for protecting real secrets.
+- **Enigma** — an Enigma I / M3 simulator, a nod to *The Imitation Game*: rotors I–VIII, reflector B or C, ring settings, start positions and up to 13 plugboard pairs, with the middle rotor's double step. The same settings encrypt and decrypt. Keeps or drops spaces and punctuation, can group output in fives, and shows the rotor windows after the last key press. "Load Example" fills in a real 1941 message.
+- **Book Cipher** — an Ottendorf cipher, a nod to *National Treasure*: any pasted or loaded text is the book. Words become `line-word` codes, or letters become `line-word-letter`; each encoding picks a random place, so repeated words get different codes. Case and punctuation around words are ignored.
+- **Substitution** — Atbash, Caesar (any shift, or "Try All 26" ranked by how English each result looks) and Vigenère with a keyword. Case, spaces and punctuation stay in place.
+- **Vigenère Cracker** — a nod to *The Da Vinci Code*: finds the key length (index of coincidence, with Kasiski repeats as a check), recovers each key letter by chi-square against English letter frequencies, and lists the best keys with a preview. Works best with a few hundred letters of English.
+
 ### JWT
 - **Verifier** — HMAC (HS256/384/512) against a shared secret, or RSA/EC (RS/ES 256/384/512) against a PEM public key or a JWKS URL.
   - Rejects `alg: none`, and refuses a token whose algorithm doesn't match the kind of key provided (algorithm-confusion defence, RFC 8725 §3.1/3.2).
@@ -101,20 +108,20 @@ Produces `target/decrypter-all.jar`.
 java -jar target/decrypter-all.jar
 ```
 
-One window opens with every tool in a sidebar, grouped as Encode / Decode, Ciphers, JWT,
-Certificates and GPG. It reopens on the screen, size and position you last used.
+One window opens with every tool in a sidebar, grouped as Encode / Decode, Ciphers, Classic Ciphers,
+JWT, Certificates, GPG, Steganography and Session. It reopens on the screen, size and position you last used.
 
 - **Find a tool:** Ctrl+K (⌘K on macOS), type, press Enter.
-- **Jump to a group:** Ctrl/⌘+1 … 7.
+- **Jump to a group:** Ctrl/⌘+1 … 8.
 - **Use two tools side by side:** "Open in New Window" on any screen; close that window to bring it back.
 - **Drop files** onto any input: text boxes load the file (Text Codecs reads binary files as raw bytes; the X.509 input also takes DER, PKCS#12, JKS and CSR files), file-path fields fill in the path.
-- **Session → History** (Ctrl/⌘+7) lists what you've run this session, newest first; "Open in Tool" puts an entry's input back. It's kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
+- **Session → History** (Ctrl/⌘+8) lists what you've run this session, newest first; "Open in Tool" puts an entry's input back. It's kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
 - **Right-click any text box** for Cut / Copy / Paste and **Copy As** plain text, JSON/JavaScript, Java or Python string, or a Markdown code block.
 
 To start on a particular screen, pass `--tool`:
 
 ```bash
-java -jar target/decrypter-all.jar --tool=gpg      # also: jwt, jwt-builder, x509, keygen, hash, recipe, hmac, aes, blowfish …
+java -jar target/decrypter-all.jar --tool=gpg      # also: jwt, jwt-builder, x509, keygen, hash, recipe, hmac, aes, blowfish, enigma, caesar …
 ```
 
 The old per-tool classes still work as entry points and open the main window on their screen:
@@ -164,9 +171,11 @@ src/main/java/com/ourgiant/crypt/
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
 ├── StegoPanels.java           # Hide / Reveal / Analyze screens
+├── ClassicCipherPanels.java   # Enigma / Book Cipher / Substitution / Vigenère Cracker screens
 ├── EasterEggs.java            # Code words; CourierMode, TextReveal, WoprDialog, MagicWord, MatrixProgressBarUI
 ├── crypto/
 │   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher, PasswordStrength
+│   ├── classic/                  # Enigma, BookCipher, ClassicCiphers, VigenereCracker - no Swing
 │   ├── stego/                    # Steganography (hide/reveal), StegoAnalysis, CourierKey - no Swing
 │   ├── asn1/                     # Small DER reader/writer (CSR parsing, certificate building)
 │   ├── jwt/                      # JwtParser, verifiers, JwtSigner, PEM key parsing, JWKS - no Swing

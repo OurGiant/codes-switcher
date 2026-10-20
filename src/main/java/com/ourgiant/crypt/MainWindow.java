@@ -169,6 +169,7 @@ public class MainWindow extends JFrame implements ScreenHost {
                 gpgFooter = collapsibleGpgFooter(gpg.detachFooter());
                 yield s;
             }
+            case CLASSIC -> ClassicCipherPanels.create();
             case STEGO -> StegoPanels.create();
             case HISTORY -> List.of(new Screen("History", new HistoryPanel(SessionHistory.global(), this)));
         };
