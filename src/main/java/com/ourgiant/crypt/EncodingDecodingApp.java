@@ -118,6 +118,10 @@ public class EncodingDecodingApp extends JFrame {
         inputTextArea.setLineWrap(true);
         inputTextArea.setWrapStyleWord(true);
         inputTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        // Dropped files go through Open File's byte-aware loader, so binary files encode exactly.
+        inputTextArea.putClientProperty(TextEnhancements.FILE_DROP_HANDLER,
+                (java.util.function.Consumer<java.nio.file.Path>) this::loadFile);
+        inputTextArea.putClientProperty("JTextField.placeholderText", "Type or paste text, or drop any file (binary files are read as raw bytes)");
         
         outputTextArea = new JTextArea(10, 40);
         outputTextArea.setLineWrap(true);
@@ -202,7 +206,6 @@ public class EncodingDecodingApp extends JFrame {
         topPanel.add(new JLabel("Encoding Method:"));
         topPanel.add(methodComboBox);
         topPanel.add(detectButton);
-        topPanel.add(detectLabel);
 
         JPanel fileButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         fileButtons.add(openFileButton);
@@ -210,6 +213,9 @@ public class EncodingDecodingApp extends JFrame {
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.add(topPanel, BorderLayout.CENTER);
         topRow.add(fileButtons, BorderLayout.EAST);
+        // Status of Detect / Open / Save on its own line so long messages aren't clipped.
+        detectLabel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 10));
+        topRow.add(detectLabel, BorderLayout.SOUTH);
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
         
         // Center panel with text areas

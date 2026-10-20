@@ -180,6 +180,7 @@ public class MainWindow extends JFrame implements ScreenHost {
             content.setBorder(BorderFactory.createCompoundBorder(new EmptyBorder(0, 4, 4, 4), content.getBorder()));
             contents.put(s.title(), content);
             holder.add(content, BorderLayout.CENTER);
+            TextEnhancements.installAll(content);
         }
         cardPanel.revalidate();
     }
