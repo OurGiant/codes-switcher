@@ -19,6 +19,12 @@ public class TextCodec {
     public static final String MD5 = "MD5 (Hash)";
     public static final String JSON = "JSON Escape";
     public static final String JWT = "JWT (Decode Only)";
+    public static final String BASE32 = "Base32";
+    public static final String BASE58 = "Base58";
+    public static final String ASCII85 = "ASCII85";
+    public static final String GZIP = "Gzip (as Base64)";
+    public static final String DEFLATE = "Deflate, raw (as Base64)";
+    public static final String UNICODE = "Unicode Escape";
 
     private TextCodec() {
     }
@@ -45,6 +51,24 @@ public class TextCodec {
 
             case JSON:
                 return jsonEscape(input);
+
+            case BASE32:
+                return ExtraCodecs.base32Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case BASE58:
+                return ExtraCodecs.base58Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case ASCII85:
+                return ExtraCodecs.ascii85Encode(input.getBytes(StandardCharsets.UTF_8));
+
+            case GZIP:
+                return ExtraCodecs.gzipEncode(input.getBytes(StandardCharsets.UTF_8));
+
+            case DEFLATE:
+                return ExtraCodecs.deflateEncode(input.getBytes(StandardCharsets.UTF_8));
+
+            case UNICODE:
+                return ExtraCodecs.unicodeEscape(input);
 
             case JWT:
                 throw new UnsupportedOperationException("JWT encoding not supported - use a proper JWT library for token creation");
@@ -88,6 +112,24 @@ public class TextCodec {
 
             case JWT:
                 return decodeJWT(input);
+
+            case BASE32:
+                return ExtraCodecs.utf8(ExtraCodecs.base32Decode(input));
+
+            case BASE58:
+                return ExtraCodecs.utf8(ExtraCodecs.base58Decode(input));
+
+            case ASCII85:
+                return ExtraCodecs.utf8(ExtraCodecs.ascii85Decode(input));
+
+            case GZIP:
+                return ExtraCodecs.utf8(ExtraCodecs.gzipDecode(input));
+
+            case DEFLATE:
+                return ExtraCodecs.utf8(ExtraCodecs.deflateDecode(input));
+
+            case UNICODE:
+                return ExtraCodecs.unicodeUnescape(input);
 
             case SHA256:
             case SHA512:

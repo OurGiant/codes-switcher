@@ -11,13 +11,15 @@ Decrypt GPG-encrypted files through a graphical interface. Automatically detects
 Encode and decode text using a wide range of formats from a single interface.
 
 **Supported formats:**
-- Base64
+- Base64, Base32 (RFC 4648), Base58 (Bitcoin alphabet), ASCII85
 - URL encoding
 - HTML entities
 - Hexadecimal
 - Binary
 - ROT13
 - JSON escape
+- Unicode escapes (`\uXXXX`; decode also accepts `\u{1F510}`)
+- Gzip and raw Deflate (compressed bytes shown as Base64; decompression capped at 64 MB)
 - JWT (decode only)
 - SHA-256 / SHA-512 / MD5 hashing
 
