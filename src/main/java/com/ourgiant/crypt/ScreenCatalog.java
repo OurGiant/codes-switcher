@@ -12,7 +12,7 @@ import java.util.Optional;
 final class ScreenCatalog {
 
     /** Which tool class builds a screen. Each is created the first time one of its screens is opened. */
-    enum Provider { CODECS, INSPECTOR, GPG, HISTORY }
+    enum Provider { CODECS, INSPECTOR, GPG, STEGO, HISTORY }
 
     /**
      * @param title    the tab title the screen has in its own window, used as its id
@@ -22,7 +22,7 @@ final class ScreenCatalog {
     record Entry(String title, String group, String label, Provider provider, List<String> aliases) {
     }
 
-    static final List<String> GROUPS = List.of("Encode / Decode", "Ciphers", "JWT", "Certificates", "GPG", "Session");
+    static final List<String> GROUPS = List.of("Encode / Decode", "Ciphers", "JWT", "Certificates", "GPG", "Steganography", "Session");
 
     static final List<Entry> ENTRIES = List.of(
             e("Text Codecs", "Encode / Decode", "Text Codecs", Provider.CODECS, "codecs", "encode", "decode", "base64", "hex", "url"),
@@ -40,6 +40,9 @@ final class ScreenCatalog {
             e("Sign", "GPG", "Sign", Provider.GPG, "gpg-sign"),
             e("Verify", "GPG", "Verify", Provider.GPG, "gpg-verify", "signature"),
             e("Keys", "GPG", "Keys", Provider.GPG, "gpg-keys", "keyring"),
+            e("Hide Message", "Steganography", "Hide Message", Provider.STEGO, "stego", "steganography", "hide", "lsb"),
+            e("Reveal Message", "Steganography", "Reveal Message", Provider.STEGO, "reveal", "unhide", "extract"),
+            e("Analyze Image", "Steganography", "Analyze Image", Provider.STEGO, "steganalysis", "analyze", "chi-square"),
             e("History", "Session", "History", Provider.HISTORY, "recent", "undo", "log"));
 
     static final String DEFAULT_SCREEN = "Text Codecs";

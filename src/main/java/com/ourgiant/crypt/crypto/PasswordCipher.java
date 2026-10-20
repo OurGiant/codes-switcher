@@ -86,8 +86,12 @@ public final class PasswordCipher {
         this(DEFAULT_ITERATIONS);
     }
 
-    /** Package-private so tests can use a low iteration count. */
-    PasswordCipher(int iterations) {
+    /**
+     * A cipher with a custom PBKDF2 iteration count. Meant for tests, which need fast key derivation;
+     * app code uses {@link #PasswordCipher()} with {@link #DEFAULT_ITERATIONS}. Decryption always uses
+     * the count stored in the data.
+     */
+    public PasswordCipher(int iterations) {
         if (iterations < 1 || iterations > MAX_ITERATIONS) {
             throw new IllegalArgumentException("iterations out of range: " + iterations);
         }
@@ -102,6 +106,22 @@ public final class PasswordCipher {
     }
 
     public String encrypt(String plaintext, char[] password, Algorithm algorithm) throws GeneralSecurityException {
+        return Base64.getEncoder().encodeToString(
+                encryptBytes(plaintext.getBytes(StandardCharsets.UTF_8), password, algorithm));
+    }
+
+    public String decrypt(String encoded, char[] password) throws GeneralSecurityException {
+        byte[] data;
+        try {
+            data = Base64.getMimeDecoder().decode(encoded.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Input is not valid Base64");
+        }
+        return new String(decryptBytes(data, password), StandardCharsets.UTF_8);
+    }
+
+    /** Raw-bytes form of {@link #encrypt}: same format, without the Base64 wrapping. */
+    public byte[] encryptBytes(byte[] plaintext, char[] password, Algorithm algorithm) throws GeneralSecurityException {
         requirePassword(password);
         byte[] salt = randomBytes(SALT_LEN);
         byte[] nonce = randomBytes(NONCE_LEN);
@@ -114,24 +134,19 @@ public final class PasswordCipher {
         try {
             Cipher cipher = initCipher(Cipher.ENCRYPT_MODE, algorithm, key, nonce);
             cipher.updateAAD(headerBytes);
-            byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            byte[] ct = cipher.doFinal(plaintext);
 
             byte[] out = Arrays.copyOf(headerBytes, headerBytes.length + ct.length);
             System.arraycopy(ct, 0, out, headerBytes.length, ct.length);
-            return Base64.getEncoder().encodeToString(out);
+            return out;
         } finally {
             Arrays.fill(key, (byte) 0);
         }
     }
 
-    public String decrypt(String encoded, char[] password) throws GeneralSecurityException {
+    /** Raw-bytes form of {@link #decrypt}. */
+    public byte[] decryptBytes(byte[] data, char[] password) throws GeneralSecurityException {
         requirePassword(password);
-        byte[] data;
-        try {
-            data = Base64.getMimeDecoder().decode(encoded.trim());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Input is not valid Base64");
-        }
         if (data.length < HEADER_LEN + TAG_LEN
                 || data[0] != MAGIC[0] || data[1] != MAGIC[1]) {
             throw new IllegalArgumentException("Input was not produced by this tool (missing header)");
@@ -157,13 +172,17 @@ public final class PasswordCipher {
         try {
             Cipher cipher = initCipher(Cipher.DECRYPT_MODE, algorithm, key, nonce);
             cipher.updateAAD(data, 0, HEADER_LEN);
-            byte[] pt = cipher.doFinal(data, HEADER_LEN, data.length - HEADER_LEN);
-            return new String(pt, StandardCharsets.UTF_8);
+            return cipher.doFinal(data, HEADER_LEN, data.length - HEADER_LEN);
         } catch (AEADBadTagException e) {
             throw new AuthenticationException();
         } finally {
             Arrays.fill(key, (byte) 0);
         }
+    }
+
+    /** Bytes {@link #encryptBytes} adds to the plaintext (header + authentication tag). */
+    public static int overheadBytes() {
+        return HEADER_LEN + TAG_LEN;
     }
 
     /** Reads which algorithm an encrypted string uses, without decrypting it. */
