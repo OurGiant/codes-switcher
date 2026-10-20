@@ -176,6 +176,7 @@ public class EncodingDecodingApp extends JFrame {
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Text Codecs", codecTab);
         tabs.addTab("Blowfish", buildBlowfishTab());
+        tabs.addTab("AES / ChaCha20", new ModernCipherPanel());
 
         add(tabs, BorderLayout.CENTER);
     }
