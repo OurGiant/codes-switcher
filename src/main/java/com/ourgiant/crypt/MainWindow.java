@@ -222,8 +222,10 @@ public class MainWindow extends JFrame implements ScreenHost {
             public void changedUpdate(DocumentEvent e) { rebuildNav(); }
         });
         filterField.addActionListener(e -> {
-            if (CourierMode.isCodeWord(filterField.getText())) {
-                toggleCourierMode();
+            Optional<EasterEggs.Egg> egg = EasterEggs.match(filterField.getText());
+            if (egg.isPresent()) {
+                filterField.setText("");
+                runEgg(egg.get());
                 return;
             }
             firstEntry().ifPresent(x -> {
@@ -524,14 +526,66 @@ public class MainWindow extends JFrame implements ScreenHost {
         });
     }
 
-    /** The easter egg: see {@link CourierMode}. */
+    /** What each code word typed in the search does; see {@link EasterEggs}. */
+    void runEgg(EasterEggs.Egg egg) {
+        switch (egg) {
+            case COURIER -> toggleCourierMode();
+            case SETEC -> {
+                boolean on = !EasterEggs.isOn(egg);
+                EasterEggs.set(egg, on);
+                if (on) {
+                    SetecDialog.show(this);
+                } else {
+                    info("Back to boring, instant output.", "Setec Astronomy");
+                }
+            }
+            case JOSHUA -> WoprDialog.open(this);
+            case RABBIT -> {
+                boolean on = !EasterEggs.isOn(egg);
+                EasterEggs.set(egg, on);
+                MatrixProgressBarUI.setEnabled(on);
+                info(on ? "<html><b>Follow the white rabbit.</b><br><br>Progress bars now run on digital rain."
+                        + "<br>Type \"white rabbit\" again to wake up.</html>"
+                        : "Back to the real world. Progress bars are normal again.", "White Rabbit");
+            }
+            case PLANET -> {
+                boolean on = !EasterEggs.isOn(egg);
+                if (on && CourierMode.isOn()) {
+                    CourierMode.set(false); // one hidden theme at a time
+                }
+                EasterEggs.set(egg, on);
+                if (on) {
+                    ThemeManager.applyPlanetTheme();
+                } else {
+                    restoreSavedTheme();
+                }
+                info(on ? "<html><b>HACK THE PLANET!</b><br><br>Type it again to go back to your theme.</html>"
+                        : "Back to your usual theme.", "Hack the Planet");
+            }
+        }
+    }
+
+    private void restoreSavedTheme() {
+        if (!ThemeManager.applyTheme(prefs.getTheme())) {
+            ThemeManager.applyTheme("Flat Light");
+        }
+    }
+
+    private void info(String text, String title) {
+        if (!GraphicsEnvironment.isHeadless()) {
+            JOptionPane.showMessageDialog(this, text, title, JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /** The Courier Mode egg: see {@link CourierMode}. */
     void toggleCourierMode() {
         boolean on = !CourierMode.isOn();
         filterField.setText("");
         if (on) {
+            EasterEggs.set(EasterEggs.Egg.PLANET, false); // one hidden theme at a time
             ThemeManager.applyCourierTheme();
-        } else if (!ThemeManager.applyTheme(prefs.getTheme())) {
-            ThemeManager.applyTheme("Flat Light");
+        } else {
+            restoreSavedTheme();
         }
         CourierMode.set(on);
         if (on) {

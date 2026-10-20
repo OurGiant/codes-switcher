@@ -191,6 +191,7 @@ final class ClassicCipherPanels {
         private void showOutput(String text) {
             output.setText(text);
             output.setCaretPosition(0);
+            TextReveal.play(output);
         }
 
         private static JLabel window() {
@@ -329,6 +330,7 @@ final class ClassicCipherPanels {
         private void showOutput(String text) {
             output.setText(text);
             output.setCaretPosition(0);
+            TextReveal.play(output);
         }
     }
 
@@ -479,6 +481,7 @@ final class ClassicCipherPanels {
         private void showOutput(String text) {
             output.setText(text);
             output.setCaretPosition(0);
+            TextReveal.play(output);
         }
     }
 
@@ -588,6 +591,7 @@ final class ClassicCipherPanels {
         private void showOutput(String text) {
             output.setText(text);
             output.setCaretPosition(0);
+            TextReveal.play(output);
         }
     }
 

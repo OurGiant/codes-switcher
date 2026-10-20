@@ -61,14 +61,33 @@ Passphrases are passed over stdin, never on the command line. Untrusted recipien
 
 Keep the PNG exactly as saved: converting it to JPEG, editing it, or sending it through apps that compress images erases the message. The encryption protects what you hid, but the method can be detected by specialised analysis, so it hides content, not the fact that something is hidden.
 
-<details>
-<summary>Easter egg (spoiler)</summary>
-
-Type `mnemonic` in the tool search and press Enter to switch on **Courier Mode**, a nod to *Johnny Mnemonic* (1995). Hide Message and Reveal Message can then use **three images** as the key instead of a password, in any order. The key is built from the images' pixels: lossless re-saves such as PNG to BMP keep it, while edits or JPEG recompression change it. Anyone with the same three files can reveal the message, so keep them as private as a password. The app goes neon while the mode is on, and typing the word again switches it off. It isn't saved between sessions, so switch it on again to reveal a message hidden this way.
-</details>
+There's also a hidden way to use three images as the key; see [Easter eggs](#easter-eggs).
 
 ### Session
 - **History** — what you've run this session, with "Open in Tool" to put an entry's input back. Kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
+
+## Easter eggs
+
+A few hidden extras, each a nod to a film. Type the code word in the tool search (Ctrl/⌘+K) and press Enter; typing it again switches it off. They last only for the current session.
+
+<details>
+<summary>Spoilers</summary>
+
+- `mnemonic`, **Courier Mode** (*Johnny Mnemonic*, 1995):
+  - Hide Message and Reveal Message can use **three images** as the key instead of a password, in any order.
+  - The key is built from the images' pixels, so lossless re-saves (PNG to BMP) keep it, while edits or JPEG recompression change it.
+  - Anyone with the same three files can reveal the message, so keep them as private as a password.
+  - The mode isn't saved between sessions, so switch it on again to reveal a message hidden this way.
+  - The app goes neon green while it's on.
+- `setec astronomy` (*Sneakers*, 1992): decrypted and decoded output resolves letter by letter. Only the drawing is scrambled; the text itself, Copy and History always have the exact output, and any click or key press ends it.
+- `joshua` (*WarGames*, 1983): a terminal-style **password strength checker**.
+  - It gives an estimate of how many guesses a password would take, based on common passwords, words, look-alike swaps, repeats, sequences, keyboard runs and years.
+  - It shows average crack times for four kinds of attack.
+  - Nothing typed there is saved, logged or sent anywhere.
+- Three wrong passwords in a row (*Jurassic Park*, 1993): a small notice that you didn't say the magic word. It appears once per session and closes itself.
+- `white rabbit` (*The Matrix*, 1999): progress bars run on digital rain.
+- `hack the planet` (*Hackers*, 1995): a loud magenta-and-cyan theme. It and Courier Mode switch each other off.
+</details>
 
 ## Prerequisites
 
@@ -151,10 +170,11 @@ src/main/java/com/ourgiant/crypt/
 │   ├── GpgKey.java, GpgVerifyResult.java  # Parsers for gpg's machine-readable output
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
-├── StegoPanels.java           # Hide / Reveal / Analyze screens (CourierMode.java: the easter egg)
+├── StegoPanels.java           # Hide / Reveal / Analyze screens
 ├── ClassicCipherPanels.java   # Enigma / Book Cipher / Substitution / Vigenère Cracker screens
+├── EasterEggs.java            # Code words; CourierMode, TextReveal, WoprDialog, MagicWord, MatrixProgressBarUI
 ├── crypto/
-│   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher
+│   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher, PasswordStrength
 │   ├── classic/                  # Enigma, BookCipher, ClassicCiphers, VigenereCracker - no Swing
 │   ├── stego/                    # Steganography (hide/reveal), StegoAnalysis, CourierKey - no Swing
 │   ├── asn1/                     # Small DER reader/writer (CSR parsing, certificate building)

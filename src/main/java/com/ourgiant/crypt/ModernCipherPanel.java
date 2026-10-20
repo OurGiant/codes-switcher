@@ -114,6 +114,10 @@ public class ModernCipherPanel extends JPanel {
                     String result = get();
                     outputArea.setText(result);
                     outputArea.setCaretPosition(0);
+                    if (!encrypt) {
+                        MagicWord.right();
+                        TextReveal.play(outputArea);
+                    }
                     // The password is never recorded; restoring brings back the text and algorithm.
                     SessionHistory.global().record("AES / ChaCha20",
                             (encrypt ? "Encrypt · " + algorithm.displayName() : "Decrypt"), input, result, () -> {
@@ -131,6 +135,9 @@ public class ModernCipherPanel extends JPanel {
                     Throwable cause = ex.getCause();
                     outputArea.setText("");
                     message((encrypt ? "Encryption" : "Decryption") + " failed: " + cause.getMessage(), "Error");
+                    if (cause instanceof PasswordCipher.AuthenticationException) {
+                        MagicWord.wrong(ModernCipherPanel.this); // after the error is dismissed
+                    }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 }

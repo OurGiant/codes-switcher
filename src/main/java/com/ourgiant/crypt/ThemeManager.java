@@ -57,6 +57,22 @@ public class ThemeManager {
         return apply(laf, "Courier");
     }
 
+    /** The "hack the planet" theme: magenta and cyan on deep purple. Not in the Theme menu. */
+    static final Map<String, String> PLANET_COLORS = Map.of(
+            "@background", "#1a0033",
+            "@foreground", "#5ff8ff",
+            "@accentColor", "#ff2bd6",
+            "@componentBackground", "#24004a",
+            "@buttonBackground", "#33075f",
+            "@selectionBackground", "#ff2bd6",
+            "@selectionForeground", "#1a0033");
+
+    public static boolean applyPlanetTheme() {
+        FlatDarkLaf laf = new FlatDarkLaf();
+        laf.setExtraDefaults(PLANET_COLORS);
+        return apply(laf, "Hack the Planet");
+    }
+
     public static boolean applyTheme(String themeName) {
         String className = AVAILABLE_THEMES.get(themeName);
         if (className == null) {
@@ -81,6 +97,7 @@ public class ThemeManager {
             }
 
             UIManager.setLookAndFeel(laf);
+            MatrixProgressBarUI.reapply();
 
             refreshDisplayableWindows();
 

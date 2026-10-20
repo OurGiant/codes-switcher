@@ -451,6 +451,7 @@ public class EncodingDecodingApp extends JFrame {
                 setOutput(TextCodec.decode(input, method), null);
             }
             recordCodec("Decode", method, inputTextArea.getText(), outputTextArea.getText());
+            TextReveal.play(outputTextArea);
         } catch (Exception e) {
             showMessage("Decoding failed: " + e.getMessage(), "Error");
         }
@@ -630,6 +631,9 @@ public class EncodingDecodingApp extends JFrame {
             blowfishOutputArea.setText(result);
             blowfishOutputArea.setCaretPosition(0);
             recordBlowfish(encrypt, input, result);
+            if (!encrypt) {
+                TextReveal.play(blowfishOutputArea);
+            }
         } catch (Exception e) {
             showMessage((encrypt ? "Encryption" : "Decryption") + " failed: " + e.getMessage(), "Error");
         }
@@ -676,6 +680,9 @@ public class EncodingDecodingApp extends JFrame {
             blowfishOutputArea.setText(result);
             blowfishOutputArea.setCaretPosition(0);
             recordBlowfish(encrypt, input, result);
+            if (!encrypt) {
+                TextReveal.play(blowfishOutputArea);
+            }
         } catch (Exception e) {
             showMessage((encrypt ? "Encryption" : "Decryption") + " failed: " + e.getMessage(), "Error");
         }

@@ -1,7 +1,6 @@
 package com.ourgiant.crypt;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -24,11 +23,7 @@ final class CourierMode {
 
     /** True for what the user types to toggle the mode: the code word, ignoring case, spaces and punctuation. */
     static boolean isCodeWord(String typed) {
-        if (typed == null) {
-            return false;
-        }
-        String t = typed.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
-        return t.equals(CODE_WORD) || t.equals("johnny" + CODE_WORD);
+        return EasterEggs.match(typed).filter(e -> e == EasterEggs.Egg.COURIER).isPresent();
     }
 
     static void set(boolean value) {
