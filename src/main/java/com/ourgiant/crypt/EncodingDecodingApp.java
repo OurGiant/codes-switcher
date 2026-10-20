@@ -43,6 +43,17 @@ public class EncodingDecodingApp extends JFrame {
     private JButton copyButton;
     private JButton swapButton;
     private JButton detectButton;
+    private JButton openFileButton;
+    private JButton saveOutputButton;
+
+    /** Raw bytes of an opened file, used instead of the input text until the user edits the input. */
+    private byte[] inputBytes;
+    /** Raw bytes from the last byte-level decode, so binary results can be saved unchanged. */
+    private byte[] outputBytes;
+    private boolean settingInputProgrammatically;
+
+    /** Files larger than this aren't loaded into the text tools (use the File Hash tab for big files). */
+    static final long MAX_OPEN_BYTES = 20L * 1024 * 1024;
     private JLabel detectLabel;
 
     // Blowfish tab components
@@ -98,6 +109,10 @@ public class EncodingDecodingApp extends JFrame {
         detectButton = new JButton("Detect Format");
         detectButton.setToolTipText("Guess the input's format and select it");
         detectLabel = new JLabel(" ");
+        openFileButton = new JButton("Open File…");
+        openFileButton.setToolTipText("Load a file as input. Binary files are kept as raw bytes for Base64, Hex, hashes, etc.");
+        saveOutputButton = new JButton("Save Output…");
+        saveOutputButton.setToolTipText("Write the output to a file (decoded binary data is saved byte-for-byte)");
         
         // Style buttons
         styleButton(encodeButton, new Color(76, 175, 80));
@@ -153,6 +168,13 @@ public class EncodingDecodingApp extends JFrame {
         topPanel.add(methodComboBox);
         topPanel.add(detectButton);
         topPanel.add(detectLabel);
+
+        JPanel fileButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        fileButtons.add(openFileButton);
+        fileButtons.add(saveOutputButton);
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.add(topPanel, BorderLayout.CENTER);
+        topRow.add(fileButtons, BorderLayout.EAST);
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
         
         // Center panel with text areas
@@ -183,7 +205,7 @@ public class EncodingDecodingApp extends JFrame {
 
         // Text-codec tab aggregates the existing method/input/output/button panels
         JPanel codecTab = new JPanel(new BorderLayout(10, 10));
-        codecTab.add(topPanel, BorderLayout.NORTH);
+        codecTab.add(topRow, BorderLayout.NORTH);
         codecTab.add(centerPanel, BorderLayout.CENTER);
         codecTab.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -191,6 +213,7 @@ public class EncodingDecodingApp extends JFrame {
         tabs.addTab("Text Codecs", codecTab);
         tabs.addTab("Recipe", new RecipePanel());
         tabs.addTab("HMAC", new HmacPanel());
+        tabs.addTab("File Hash", new FileHashPanel());
         tabs.addTab("Blowfish", buildBlowfishTab());
         tabs.addTab("AES / ChaCha20", new ModernCipherPanel());
 
@@ -240,6 +263,14 @@ public class EncodingDecodingApp extends JFrame {
         copyButton.addActionListener(e -> copyOutput());
         swapButton.addActionListener(e -> swapInputOutput());
         detectButton.addActionListener(e -> detectFormat());
+        openFileButton.addActionListener(e -> openFile());
+        saveOutputButton.addActionListener(e -> saveOutput());
+        // Typing in the input means the user is now working with text, not the opened file's bytes.
+        inputTextArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { inputEdited(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { inputEdited(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { }
+        });
 
         blowfishEncryptButton.addActionListener(e -> performBlowfish(true));
         blowfishDecryptButton.addActionListener(e -> performBlowfish(false));
@@ -312,40 +343,147 @@ public class EncodingDecodingApp extends JFrame {
     }
     
     private void performEncoding() {
+        String method = (String) methodComboBox.getSelectedItem();
         String input = inputTextArea.getText();
-        if (input.isEmpty()) {
+        if (inputBytes == null && input.isEmpty()) {
             showMessage("Please enter text to encode.", "Input Required");
             return;
         }
-        
+
         try {
-            String encoded = TextCodec.encode(input, (String) methodComboBox.getSelectedItem());
-            outputTextArea.setText(encoded);
-            outputTextArea.setCaretPosition(0);
+            String encoded;
+            if (inputBytes != null && TextCodec.BYTE_METHODS.contains(method)) {
+                encoded = TextCodec.encodeBytes(inputBytes, method);
+            } else if (inputBytes != null && !FormatDetector.printable(inputBytes)) {
+                showMessage(method + " works on text, but the opened file is binary. "
+                        + "Use Base64, Hex or another byte format instead.", "Binary Input");
+                return;
+            } else {
+                encoded = TextCodec.encode(input, method);
+            }
+            setOutput(encoded, null);
         } catch (Exception e) {
             showMessage("Encoding failed: " + e.getMessage(), "Error");
         }
     }
-    
+
     private void performDecoding() {
-        String input = inputTextArea.getText();
+        String method = (String) methodComboBox.getSelectedItem();
+        String input = inputBytes != null && FormatDetector.printable(inputBytes)
+                ? new String(inputBytes, java.nio.charset.StandardCharsets.UTF_8)
+                : inputTextArea.getText();
         if (input.isEmpty()) {
             showMessage("Please enter text to decode.", "Input Required");
             return;
         }
-        
+
         try {
-            String decoded = TextCodec.decode(input, (String) methodComboBox.getSelectedItem());
-            outputTextArea.setText(decoded);
-            outputTextArea.setCaretPosition(0);
+            if (TextCodec.BYTE_METHODS.contains(method) && !TextCodec.isHash(method)) {
+                byte[] raw = TextCodec.decodeBytes(input, method);
+                if (FormatDetector.printable(raw) || raw.length == 0) {
+                    setOutput(new String(raw, java.nio.charset.StandardCharsets.UTF_8), raw);
+                } else {
+                    setOutput(binaryPlaceholder(raw.length, "use Save Output… to write them to a file"), raw);
+                }
+            } else {
+                setOutput(TextCodec.decode(input, method), null);
+            }
         } catch (Exception e) {
             showMessage("Decoding failed: " + e.getMessage(), "Error");
         }
     }
+
+    private void setOutput(String text, byte[] raw) {
+        outputBytes = raw;
+        outputTextArea.setText(text);
+        outputTextArea.setCaretPosition(0);
+    }
+
+    private static String binaryPlaceholder(int length, String hint) {
+        return "[" + length + " bytes of binary data — " + hint + "]";
+    }
+
+    private void setInput(String text, byte[] raw) {
+        settingInputProgrammatically = true;
+        try {
+            inputTextArea.setText(text);
+            inputTextArea.setCaretPosition(0);
+        } finally {
+            settingInputProgrammatically = false;
+        }
+        inputBytes = raw;
+        inputTextArea.setEditable(raw == null || FormatDetector.printable(raw));
+    }
+
+    private void inputEdited() {
+        if (!settingInputProgrammatically && inputBytes != null) {
+            inputBytes = null;
+        }
+    }
+
+    private void openFile() {
+        JFileChooser chooser = new JFileChooser();
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        loadFile(chooser.getSelectedFile().toPath());
+    }
+
+    void loadFile(java.nio.file.Path path) {
+        try {
+            long size = java.nio.file.Files.size(path);
+            if (size > MAX_OPEN_BYTES) {
+                showMessage("That file is " + (size >> 20) + " MB. Files over " + (MAX_OPEN_BYTES >> 20)
+                        + " MB can't be loaded here; use the File Hash tab to hash large files.", "File Too Large");
+                return;
+            }
+            byte[] data = java.nio.file.Files.readAllBytes(path);
+            String name = path.getFileName().toString();
+            if (FormatDetector.printable(data)) {
+                setInput(new String(data, java.nio.charset.StandardCharsets.UTF_8), data);
+            } else {
+                setInput(binaryPlaceholder(data.length, name + " is binary; Encode works on its raw bytes"), data);
+            }
+            outputTextArea.setText("");
+            outputBytes = null;
+            detectLabel.setText("Loaded " + name + " (" + data.length + " bytes)");
+        } catch (java.io.IOException e) {
+            showMessage("Couldn't read the file: " + e.getMessage(), "Error");
+        }
+    }
+
+    private void saveOutput() {
+        if (outputTextArea.getText().isEmpty()) {
+            showMessage("No output to save.", "Nothing to Save");
+            return;
+        }
+        JFileChooser chooser = new JFileChooser();
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        java.nio.file.Path target = chooser.getSelectedFile().toPath();
+        if (java.nio.file.Files.exists(target) && JOptionPane.showConfirmDialog(this,
+                target.getFileName() + " already exists. Replace it?", "Confirm Save",
+                JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+            return;
+        }
+        try {
+            writeOutput(target);
+            detectLabel.setText("Saved " + java.nio.file.Files.size(target) + " bytes to " + target.getFileName());
+        } catch (java.io.IOException e) {
+            showMessage("Couldn't save the file: " + e.getMessage(), "Error");
+        }
+    }
+
+    void writeOutput(java.nio.file.Path target) throws java.io.IOException {
+        byte[] data = outputBytes != null ? outputBytes
+                : outputTextArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        java.nio.file.Files.write(target, data);
+    }
     
     private void clearAll() {
-        inputTextArea.setText("");
-        outputTextArea.setText("");
+        setInput("", null);
+        setOutput("", null);
         detectLabel.setText(" ");
         inputTextArea.requestFocus();
     }
@@ -371,8 +509,10 @@ public class EncodingDecodingApp extends JFrame {
             return;
         }
         
-        inputTextArea.setText(output);
-        outputTextArea.setText(input);
+        byte[] newInputBytes = outputBytes;
+        byte[] newOutputBytes = inputBytes;
+        setInput(output, newInputBytes);
+        setOutput(input, newOutputBytes);
     }
     
     private void performBlowfish(boolean encrypt) {
