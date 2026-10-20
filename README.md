@@ -21,6 +21,10 @@ Encode and decode text using a wide range of formats from a single interface.
 - JWT (decode only)
 - SHA-256 / SHA-512 / MD5 hashing
 
+**Cipher tabs:**
+- **AES / ChaCha20** — password-based AES-256-GCM or ChaCha20-Poly1305. The key comes from PBKDF2-HMAC-SHA256 (600,000 iterations, random salt) and each encryption uses a random nonce. Output is one Base64 string holding everything needed to decrypt except the password; a wrong password or any change to the data is detected and reported.
+- **Blowfish** — legacy Blowfish (ECB, hex output, optional CRC framing) for working with existing data. Not suitable for protecting new secrets.
+
 ### JWT / X.509 Inspector
 A third tool for signature verification and certificate inspection — extends beyond the Encoder/Decoder's JWT decode-only support.
 
