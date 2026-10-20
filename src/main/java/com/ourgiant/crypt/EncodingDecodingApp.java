@@ -423,6 +423,7 @@ public class EncodingDecodingApp extends JFrame {
                 encoded = TextCodec.encode(input, method);
             }
             setOutput(encoded, null);
+            recordCodec("Encode", method, input, encoded);
         } catch (Exception e) {
             showMessage("Encoding failed: " + e.getMessage(), "Error");
         }
@@ -449,9 +450,26 @@ public class EncodingDecodingApp extends JFrame {
             } else {
                 setOutput(TextCodec.decode(input, method), null);
             }
+            recordCodec("Decode", method, inputTextArea.getText(), outputTextArea.getText());
         } catch (Exception e) {
             showMessage("Decoding failed: " + e.getMessage(), "Error");
         }
+    }
+
+    /**
+     * Adds a Text Codecs run to the session history. An opened file's bytes are kept for
+     * "Open in Tool" only when small, so the in-memory history can't grow without bound.
+     */
+    private void recordCodec(String verb, String method, String shownInput, String output) {
+        byte[] bytes = inputBytes;
+        boolean restorable = bytes == null || bytes.length <= SessionHistory.MAX_CHARS;
+        byte[] keep = bytes != null && restorable ? bytes.clone() : null;
+        SessionHistory.global().record("Text Codecs", verb + " · " + method, shownInput, output,
+                restorable ? () -> {
+                    methodComboBox.setSelectedItem(method);
+                    setInput(shownInput, keep);
+                    setOutput("", null);
+                } : null);
     }
 
     private void setOutput(String text, byte[] raw) {
@@ -611,9 +629,29 @@ public class EncodingDecodingApp extends JFrame {
 
             blowfishOutputArea.setText(result);
             blowfishOutputArea.setCaretPosition(0);
+            recordBlowfish(encrypt, input, result);
         } catch (Exception e) {
             showMessage((encrypt ? "Encryption" : "Decryption") + " failed: " + e.getMessage(), "Error");
         }
+    }
+
+    /** History never stores the key; restoring brings back the text and mode settings only. */
+    private void recordBlowfish(boolean encrypt, String input, String result) {
+        Object mode = blowfishModeBox.getSelectedItem();
+        boolean crc = blowfishCrcCheckBox.isSelected();
+        String iv = blowfishIvField.getText();
+        Object padding = blowfishPaddingBox.getSelectedItem();
+        Object encoding = blowfishEncodingBox.getSelectedItem();
+        String op = (encrypt ? "Encrypt" : "Decrypt") + (BLOWFISH_CBC.equals(mode) ? " · CBC" : " · Legacy");
+        SessionHistory.global().record("Blowfish", op, input, result, () -> {
+            blowfishModeBox.setSelectedItem(mode);
+            blowfishCrcCheckBox.setSelected(crc);
+            blowfishIvField.setText(iv);
+            blowfishPaddingBox.setSelectedItem(padding);
+            blowfishEncodingBox.setSelectedItem(encoding);
+            blowfishInputArea.setText(input);
+            blowfishOutputArea.setText("");
+        });
     }
 
     private void performBlowfishCbc(boolean encrypt, String input) {
@@ -637,6 +675,7 @@ public class EncodingDecodingApp extends JFrame {
                     : BlowfishCbc.decrypt(input, key, iv, padding, encoding);
             blowfishOutputArea.setText(result);
             blowfishOutputArea.setCaretPosition(0);
+            recordBlowfish(encrypt, input, result);
         } catch (Exception e) {
             showMessage((encrypt ? "Encryption" : "Decryption") + " failed: " + e.getMessage(), "Error");
         }

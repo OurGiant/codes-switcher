@@ -189,6 +189,19 @@ public class RecipePanel extends JPanel {
         }
         resultsArea.setText(sb.toString());
         resultsArea.setCaretPosition(0);
+
+        Recipe ran = recipe();
+        String input = inputArea.getText();
+        boolean ok = !finalOutput.isEmpty() || results.get(results.size() - 1).ok();
+        SessionHistory.global().record("Recipe",
+                "Run " + ran.steps().size() + " step" + (ran.steps().size() == 1 ? "" : "s") + (ok ? "" : " (failed)"),
+                input, ok ? finalOutput : sb.toString(), () -> {
+                    stepsModel.clear();
+                    ran.steps().forEach(stepsModel::addElement);
+                    inputArea.setText(input);
+                    resultsArea.setText("");
+                    finalOutput = "";
+                });
     }
 
     private static void copy(String text) {

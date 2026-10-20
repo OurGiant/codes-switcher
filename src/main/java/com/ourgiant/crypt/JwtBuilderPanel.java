@@ -126,6 +126,16 @@ public class JwtBuilderPanel extends JPanel {
                             PemPrivateKeys.parse(privateKeyArea.getText()));
             tokenArea.setText(token);
             tokenArea.setCaretPosition(0);
+            // The secret / private key is never recorded.
+            String header = headerArea.getText();
+            String payload = payloadArea.getText();
+            SessionHistory.global().record("JWT Builder", "Create " + alg,
+                    "header:\n" + header + "\n\npayload:\n" + payload, token, () -> {
+                        algorithmBox.setSelectedItem(alg);
+                        headerArea.setText(header);
+                        payloadArea.setText(payload);
+                        tokenArea.setText("");
+                    });
         } catch (Exception ex) {
             tokenArea.setText("");
             error(ex.getMessage());

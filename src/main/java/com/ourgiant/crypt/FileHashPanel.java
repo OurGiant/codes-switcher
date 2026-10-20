@@ -146,7 +146,13 @@ public class FileHashPanel extends JPanel {
                 computeButton.setEnabled(true);
                 cancelButton.setEnabled(false);
                 try {
-                    resultField.setText(get());
+                    String hash = get();
+                    resultField.setText(hash);
+                    SessionHistory.global().record("File Hash", algorithm.toString(), file.toString(), hash, () -> {
+                        fileField.setText(file.toString());
+                        algorithmBox.setSelectedItem(algorithm);
+                        resultField.setText("");
+                    });
                     progress.setValue(1000);
                     progress.setString(String.format("Done — %,d bytes", size));
                     updateMatch();
