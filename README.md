@@ -47,6 +47,13 @@ Uses the system `gpg`. The app detects its version and can install GPG 2.4.8+ if
 
 Passphrases are passed over stdin, never on the command line. Untrusted recipient keys need an explicit "Trust recipient keys" tick.
 
+### Steganography
+- **Hide Message** — hide text or a file inside an image (PNG, BMP, JPEG or GIF in; **PNG out**). It's encrypted with AES-256-GCM from your password, then written into the lowest bit of the image's colour values at password-scattered positions, so each colour changes by at most 1/255. A meter shows how much fits (an 800×500 image holds about 146 KB).
+- **Reveal Message** — get the text or file back with the password. A wrong password and a clean image look the same ("nothing found"); an image that was edited or recompressed after hiding is reported as damaged.
+- **Analyze Image** — view the image's lowest-bit plane and run a chi-square test for LSB hiding, e.g. for CTF puzzles.
+
+Keep the PNG exactly as saved: converting it to JPEG, editing it, or sending it through apps that compress images erases the message. The encryption protects what you hid, but the method can be detected by specialised analysis, so it hides content, not the fact that something is hidden.
+
 ### Session
 - **History** — what you've run this session, with "Open in Tool" to put an entry's input back. Kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
 
@@ -73,10 +80,10 @@ One window opens with every tool in a sidebar, grouped as Encode / Decode, Ciphe
 Certificates and GPG. It reopens on the screen, size and position you last used.
 
 - **Find a tool:** Ctrl+K (⌘K on macOS), type, press Enter.
-- **Jump to a group:** Ctrl/⌘+1 … 6.
+- **Jump to a group:** Ctrl/⌘+1 … 7.
 - **Use two tools side by side:** "Open in New Window" on any screen; close that window to bring it back.
 - **Drop files** onto any input: text boxes load the file (Text Codecs reads binary files as raw bytes; the X.509 input also takes DER, PKCS#12, JKS and CSR files), file-path fields fill in the path.
-- **Session → History** (Ctrl/⌘+6) lists what you've run this session, newest first; "Open in Tool" puts an entry's input back. It's kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
+- **Session → History** (Ctrl/⌘+7) lists what you've run this session, newest first; "Open in Tool" puts an entry's input back. It's kept in memory only, cleared when the app closes, and never includes passwords, secrets or keys.
 - **Right-click any text box** for Cut / Copy / Paste and **Copy As** plain text, JSON/JavaScript, Java or Python string, or a Markdown code block.
 
 To start on a particular screen, pass `--tool`:
@@ -131,8 +138,10 @@ src/main/java/com/ourgiant/crypt/
 │   ├── GpgKey.java, GpgVerifyResult.java  # Parsers for gpg's machine-readable output
 │   ├── GpgProgressListener.java  # Progress callback interface
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
+├── StegoPanels.java           # Hide / Reveal / Analyze screens
 ├── crypto/
 │   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher
+│   ├── stego/                    # Steganography (hide/reveal), StegoAnalysis - no Swing
 │   ├── asn1/                     # Small DER reader/writer (CSR parsing, certificate building)
 │   ├── jwt/                      # JwtParser, verifiers, JwtSigner, PEM key parsing, JWKS - no Swing
 │   └── cert/                     # X509Inspector, ChainValidator, CsrParser, KeyStoreReader,
