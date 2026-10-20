@@ -42,6 +42,8 @@ public class EncodingDecodingApp extends JFrame {
     private JButton clearButton;
     private JButton copyButton;
     private JButton swapButton;
+    private JButton detectButton;
+    private JLabel detectLabel;
 
     // Blowfish tab components
     private JTextField blowfishKeyField;
@@ -96,6 +98,9 @@ public class EncodingDecodingApp extends JFrame {
         clearButton = new JButton("Clear All");
         copyButton = new JButton("Copy Output");
         swapButton = new JButton("Swap ↕");
+        detectButton = new JButton("Detect Format");
+        detectButton.setToolTipText("Guess the input's format and select it");
+        detectLabel = new JLabel(" ");
         
         // Style buttons
         styleButton(encodeButton, new Color(76, 175, 80));
@@ -149,6 +154,8 @@ public class EncodingDecodingApp extends JFrame {
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("Encoding Method:"));
         topPanel.add(methodComboBox);
+        topPanel.add(detectButton);
+        topPanel.add(detectLabel);
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
         
         // Center panel with text areas
@@ -234,6 +241,7 @@ public class EncodingDecodingApp extends JFrame {
         clearButton.addActionListener(e -> clearAll());
         copyButton.addActionListener(e -> copyOutput());
         swapButton.addActionListener(e -> swapInputOutput());
+        detectButton.addActionListener(e -> detectFormat());
 
         blowfishEncryptButton.addActionListener(e -> performBlowfish(true));
         blowfishDecryptButton.addActionListener(e -> performBlowfish(false));
@@ -254,6 +262,37 @@ public class EncodingDecodingApp extends JFrame {
         });
     }
     
+    private void detectFormat() {
+        java.util.List<FormatDetector.Guess> guesses = FormatDetector.detect(inputTextArea.getText());
+        if (guesses.isEmpty()) {
+            detectLabel.setText("No encoding recognised — looks like plain text.");
+            detectLabel.setToolTipText(null);
+            return;
+        }
+        FormatDetector.Guess best = guesses.get(0);
+        StringBuilder tip = new StringBuilder("<html>");
+        for (FormatDetector.Guess g : guesses) {
+            tip.append("<b>").append(g.label()).append("</b> (").append(g.score()).append("%) — ")
+                    .append(escapeHtml(g.reason())).append("<br>");
+        }
+        detectLabel.setToolTipText(tip.append("</html>").toString());
+
+        FormatDetector.Guess decodable = guesses.stream().filter(FormatDetector.Guess::decodable).findFirst().orElse(null);
+        String others = guesses.size() > 1 ? "  (+" + (guesses.size() - 1) + " more — hover)" : "";
+        if (decodable != null) {
+            methodComboBox.setSelectedItem(decodable.method());
+        }
+        if (best.decodable()) {
+            detectLabel.setText("Looks like " + best.label() + " — selected." + others);
+        } else {
+            detectLabel.setText("Looks like " + best.label() + ": " + best.reason() + others);
+        }
+    }
+
+    private static String escapeHtml(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
     private void updateDecodeButton() {
         String method = (String) methodComboBox.getSelectedItem();
         boolean isHashMethod = method.contains("Hash");
@@ -309,6 +348,7 @@ public class EncodingDecodingApp extends JFrame {
     private void clearAll() {
         inputTextArea.setText("");
         outputTextArea.setText("");
+        detectLabel.setText(" ");
         inputTextArea.requestFocus();
     }
     
