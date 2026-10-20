@@ -220,10 +220,16 @@ public class MainWindow extends JFrame implements ScreenHost {
             public void removeUpdate(DocumentEvent e) { rebuildNav(); }
             public void changedUpdate(DocumentEvent e) { rebuildNav(); }
         });
-        filterField.addActionListener(e -> firstEntry().ifPresent(x -> {
-            showScreen(x.title());
-            navList.requestFocusInWindow();
-        }));
+        filterField.addActionListener(e -> {
+            if (CourierMode.isCodeWord(filterField.getText())) {
+                toggleCourierMode();
+                return;
+            }
+            firstEntry().ifPresent(x -> {
+                showScreen(x.title());
+                navList.requestFocusInWindow();
+            });
+        });
         filterField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "clear");
         filterField.getActionMap().put("clear", new AbstractAction() {
             @Override
@@ -515,6 +521,30 @@ public class MainWindow extends JFrame implements ScreenHost {
                 focusSearch();
             }
         });
+    }
+
+    /** The easter egg: see {@link CourierMode}. */
+    void toggleCourierMode() {
+        boolean on = !CourierMode.isOn();
+        filterField.setText("");
+        if (on) {
+            ThemeManager.applyCourierTheme();
+        } else if (!ThemeManager.applyTheme(prefs.getTheme())) {
+            ThemeManager.applyTheme("Flat Light");
+        }
+        CourierMode.set(on);
+        if (on) {
+            showScreen(StegoPanels.HIDE);
+        }
+        if (!GraphicsEnvironment.isHeadless()) {
+            JOptionPane.showMessageDialog(this, on
+                    ? "<html><b>COURIER MODE ONLINE</b><br><br>"
+                    + "Hide Message and Reveal Message can now use <b>three images</b> as the key instead of a password.<br>"
+                    + "Anyone with the same three image files can reveal the message, so keep them as private as a password.<br><br>"
+                    + "Type \"" + CourierMode.CODE_WORD + "\" in the search again to switch it off.</html>"
+                    : "Courier Mode offline. Passwords only, and your theme is back.",
+                    "Courier Mode", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     void focusSearch() {

@@ -92,9 +92,16 @@ final class AboutDialog extends JDialog {
             <h2 style="margin-top: 0;">Codes Switcher</h2>
             <p>Version %s</p>
             <p>A GPG file decryptor and universal text encoder/decoder.</p>
-            <p>&copy; OurGiant</p>
+            <p>&copy; OurGiant</p>%s
             </body></html>
-            """.formatted(currentVersion);
+            """.formatted(currentVersion, courierLine());
+    }
+
+    /** Courier Mode's wink; empty when the mode is off. */
+    static String courierLine() {
+        return CourierMode.isOn()
+            ? "\n<p style=\"color: #39ff14;\"><b>Courier Mode online.</b> Three frames, one key. Deliver the package.</p>"
+            : "";
     }
 
     private void startUpdateCheck(JLabel updateLabel, String currentVersion) {
