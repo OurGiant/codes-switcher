@@ -87,6 +87,7 @@ A few hidden extras, each a nod to a film. Type the code word in the tool search
 - Three wrong passwords in a row (*Jurassic Park*, 1993): a small notice that you didn't say the magic word. It appears once per session and closes itself.
 - `white rabbit` (*The Matrix*, 1999): progress bars run on digital rain.
 - `hack the planet` (*Hackers*, 1995): a loud magenta-and-cyan theme. It and Courier Mode switch each other off.
+- `macrodata refinement` (also `mdr` or `lumon`) (*Severance*): a retro terminal of drifting numbers. Find the scary ones (they twitch as the cursor nears), click a group, then sort it into one of five bins until the file is 100% complete.
 </details>
 
 ## Prerequisites
@@ -172,7 +173,7 @@ src/main/java/com/ourgiant/crypt/
 │   └── ProcessStarter.java       # Injectable process-starting seam (for tests)
 ├── StegoPanels.java           # Hide / Reveal / Analyze screens
 ├── ClassicCipherPanels.java   # Enigma / Book Cipher / Substitution / Vigenère Cracker screens
-├── EasterEggs.java            # Code words; CourierMode, TextReveal, WoprDialog, MagicWord, MatrixProgressBarUI
+├── EasterEggs.java            # Code words; CourierMode, TextReveal, WoprDialog, MagicWord, MatrixProgressBarUI, Macrodata*
 ├── crypto/
 │   ├── PasswordCipher, BlowfishCodec, BlowfishCbc, Blake2b, HmacGenerator, FileHasher, PasswordStrength
 │   ├── classic/                  # Enigma, BookCipher, ClassicCiphers, VigenereCracker - no Swing
