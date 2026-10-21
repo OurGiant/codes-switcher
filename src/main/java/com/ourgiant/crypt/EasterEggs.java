@@ -24,7 +24,9 @@ final class EasterEggs {
         /** The Matrix: digital-rain progress bars. */
         RABBIT("white rabbit", "follow the white rabbit"),
         /** Hackers: a loud neon theme. */
-        PLANET("hack the planet");
+        PLANET("hack the planet"),
+        /** Severance: sort the scary numbers. Opens a window; nothing to toggle. */
+        MDR("macrodata refinement", "macrodata", "mdr", "lumon");
 
         private final List<String> words;
 

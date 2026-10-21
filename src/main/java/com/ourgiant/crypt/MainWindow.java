@@ -540,6 +540,7 @@ public class MainWindow extends JFrame implements ScreenHost {
                 }
             }
             case JOSHUA -> WoprDialog.open(this);
+            case MDR -> MacrodataDialog.open(this);
             case RABBIT -> {
                 boolean on = !EasterEggs.isOn(egg);
                 EasterEggs.set(egg, on);
